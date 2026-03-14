@@ -1,31 +1,117 @@
+/* PulseTrack Design System V01 - CSS Variables */
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap');
+
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
+:root {
+  --bg: #FAFAFA;
+  --surface: #FFFFFF;
+  --surface-2: #F4F4F5;
+  --border: #E4E4E7;
+  --border-strong: #D4D4D8;
+  --text-1: #09090B;
+  --text-2: #3F3F46;
+  --text-3: #A1A1AA;
+  --accent: #6366F1;
+  --accent-hover: #4F46E5;
+  --accent-subtle: #EEF2FF;
+  --ai-surface: #F5F3FF;
+  --ai-border: #C4B5FD;
+  --success: #059669;
+  --success-subtle: #ECFDF5;
+  --warning: #D97706;
+  --warning-subtle: #FFFBEB;
+  --danger: #DC2626;
+  --danger-subtle: #FEF2F2;
+  --font-sans: 'Geist', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', monospace;
+  --r-sm: 4px;
+  --r-md: 6px;
+  --r-lg: 10px;
+  --r-xl: 14px;
+  --r-full: 9999px;
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-io: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 100ms;
+  --dur-base: 160ms;
+  --dur-slow: 280ms;
+}
+
+[data-theme='dark'], body {
+  --bg: #09090B;
+  --surface: #111113;
+  --surface-2: #18181B;
+  --border: #27272A;
+  --border-strong: #3F3F46;
+  --text-1: #FAFAFA;
+  --text-2: #A1A1AA;
+  --text-3: #52525B;
+  --accent: #818CF8;
+  --accent-hover: #6366F1;
+  --accent-subtle: #1E1B4B;
+  --ai-surface: #13111C;
+  --ai-border: #4C1D95;
+  --success: #10B981;
+  --success-subtle: #022C22;
+  --warning: #F59E0B;
+  --warning-subtle: #1C1400;
+  --danger: #EF4444;
+  --danger-subtle: #2D0707;
+}
+
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: #000000;
-  color: #ffffff;
+  background: var(--bg);
+  color: var(--text-1);
   overflow: hidden;
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 code, pre {
-  font-family: 'JetBrains Mono', source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-family: var(--font-mono);
 }
 
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(-10px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.cursor-blink {
+  animation: blink 1s step-end infinite;
+  color: var(--accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
 }

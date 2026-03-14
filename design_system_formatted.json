@@ -1,0 +1,336 @@
+{
+    "_meta": {
+        "product": "PulseTrack",
+        "tagline": "Product clarity, from signal to spec.",
+        "version": "1.0",
+        "stack": "React + TypeScript + Tailwind CSS v4 + Framer Motion + Lucide React",
+        "fonts_import": "@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap');",
+        "aesthetic": "Sparse, high-contrast, tool-first. Inspired by Linear's density and Vercel's monochrome restraint. No gradients except subtle AI surfaces. Dark-first."
+    },
+    "tokens": {
+        "color": {
+            "_note": "Use CSS variables everywhere. Never hardcode hex. Toggle [data-theme='dark'] on <html> for dark mode.",
+            "light": {
+                "--bg": "#FAFAFA",
+                "--surface": "#FFFFFF",
+                "--surface-2": "#F4F4F5",
+                "--border": "#E4E4E7",
+                "--border-strong": "#D4D4D8",
+                "--text-1": "#09090B",
+                "--text-2": "#3F3F46",
+                "--text-3": "#A1A1AA",
+                "--accent": "#6366F1",
+                "--accent-hover": "#4F46E5",
+                "--accent-subtle": "#EEF2FF",
+                "--ai-surface": "#F5F3FF",
+                "--ai-border": "#C4B5FD",
+                "--success": "#059669",
+                "--success-subtle": "#ECFDF5",
+                "--warning": "#D97706",
+                "--warning-subtle": "#FFFBEB",
+                "--danger": "#DC2626",
+                "--danger-subtle": "#FEF2F2"
+            },
+            "dark": {
+                "--bg": "#09090B",
+                "--surface": "#111113",
+                "--surface-2": "#18181B",
+                "--border": "#27272A",
+                "--border-strong": "#3F3F46",
+                "--text-1": "#FAFAFA",
+                "--text-2": "#A1A1AA",
+                "--text-3": "#52525B",
+                "--accent": "#818CF8",
+                "--accent-hover": "#6366F1",
+                "--accent-subtle": "#1E1B4B",
+                "--ai-surface": "#13111C",
+                "--ai-border": "#4C1D95",
+                "--success": "#10B981",
+                "--success-subtle": "#022C22",
+                "--warning": "#F59E0B",
+                "--warning-subtle": "#1C1400",
+                "--danger": "#EF4444",
+                "--danger-subtle": "#2D0707"
+            }
+        },
+        "typography": {
+            "families": {
+                "--font-sans": "'Geist', system-ui, sans-serif",
+                "--font-mono": "'Geist Mono', monospace"
+            },
+            "_note": "Geist is Vercel's open-source font. Optically clean at small sizes. Perfect for a dense tool UI.",
+            "scale": {
+                "--text-xs": {
+                    "size": "11px",
+                    "line": "1.45",
+                    "weight": "500",
+                    "use": "badges, keyboard hints, labels"
+                },
+                "--text-sm": {
+                    "size": "13px",
+                    "line": "1.5",
+                    "weight": "400",
+                    "use": "metadata, timestamps, secondary text"
+                },
+                "--text-base": {
+                    "size": "14px",
+                    "line": "1.6",
+                    "weight": "400",
+                    "use": "default body, list items, descriptions"
+                },
+                "--text-md": {
+                    "size": "15px",
+                    "line": "1.55",
+                    "weight": "400",
+                    "use": "emphasized body, card text"
+                },
+                "--text-lg": {
+                    "size": "18px",
+                    "line": "1.4",
+                    "weight": "500",
+                    "use": "panel headers, section titles"
+                },
+                "--text-xl": {
+                    "size": "22px",
+                    "line": "1.3",
+                    "weight": "600",
+                    "use": "page titles, modal headers"
+                },
+                "--text-2xl": {
+                    "size": "30px",
+                    "line": "1.2",
+                    "weight": "700",
+                    "use": "onboarding / hero only"
+                },
+                "--text-mono": {
+                    "size": "13px",
+                    "line": "1.6",
+                    "weight": "400",
+                    "use": "code, tokens \u2014 always Geist Mono"
+                }
+            }
+        },
+        "spacing": {
+            "_note": "4px base grid only. No arbitrary values.",
+            "scale": {
+                "--s-1": "4px",
+                "--s-2": "8px",
+                "--s-3": "12px",
+                "--s-4": "16px",
+                "--s-5": "20px",
+                "--s-6": "24px",
+                "--s-8": "32px",
+                "--s-10": "40px",
+                "--s-12": "48px"
+            }
+        },
+        "radius": {
+            "--r-sm": "4px",
+            "--r-md": "6px",
+            "--r-lg": "10px",
+            "--r-xl": "14px",
+            "--r-full": "9999px"
+        },
+        "shadow": {
+            "--shadow-sm": "0 1px 2px rgba(0,0,0,0.05)",
+            "--shadow-md": "0 2px 8px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04)",
+            "--shadow-lg": "0 8px 24px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.06)",
+            "--shadow-cmd": "0 20px 60px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.06)"
+        },
+        "animation": {
+            "--ease-out": "cubic-bezier(0.16, 1, 0.3, 1)",
+            "--ease-in": "cubic-bezier(0.7, 0, 1, 1)",
+            "--ease-io": "cubic-bezier(0.65, 0, 0.35, 1)",
+            "--dur-fast": "100ms",
+            "--dur-base": "160ms",
+            "--dur-slow": "280ms"
+        }
+    },
+    "layout": {
+        "shell": {
+            "type": "CSS Grid",
+            "columns": "200px 1fr 360px",
+            "rows": "44px 1fr",
+            "areas": "left-nav + top-bar + main-canvas + right-panel",
+            "collapse_1100px": "44px nav (icons only) + main canvas, hide right panel",
+            "note": "This is fixed. Do not invent alternate layouts."
+        },
+        "content_max_width": "72ch for reading columns. No limit for data panels."
+    },
+    "components": {
+        "button": {
+            "base_css": "inline-flex items-center gap-1.5 font-medium rounded-[--r-md] transition-all duration-[--dur-fast] focus-visible:outline-2 focus-visible:outline-[--accent] focus-visible:outline-offset-2 select-none cursor-pointer whitespace-nowrap",
+            "sizes": {
+                "sm": "h-7 px-3 text-[13px]",
+                "md": "h-8 px-3.5 text-[14px]",
+                "lg": "h-10 px-5 text-[15px]"
+            },
+            "variants": {
+                "primary": "bg-[--accent] text-white hover:bg-[--accent-hover] border border-transparent",
+                "secondary": "bg-[--surface] text-[--text-2] border border-[--border] hover:border-[--border-strong] hover:text-[--text-1]",
+                "ghost": "bg-transparent text-[--text-2] border border-transparent hover:bg-[--surface-2] hover:text-[--text-1]",
+                "danger": "bg-[--danger] text-white hover:opacity-90 border border-transparent",
+                "ai": "bg-[--ai-surface] text-[--accent] border border-[--ai-border] hover:border-[--accent]"
+            },
+            "default_size": "md"
+        },
+        "input": {
+            "base_css": "w-full h-8 px-3 text-[14px] text-[--text-1] bg-[--surface] border border-[--border] rounded-[--r-md] placeholder:text-[--text-3] transition-all duration-[--dur-fast] focus:outline-none focus:border-[--accent] focus:ring-2 focus:ring-[--accent]/10",
+            "textarea_extra": "h-auto min-h-[96px] py-2 resize-y",
+            "ai_variant": "focus:border-[--ai-border] focus:ring-[--ai-border]/15"
+        },
+        "card": {
+            "base": "bg-[--surface] border border-[--border] rounded-[--r-lg] p-5",
+            "hover": "transition-all duration-[--dur-base] hover:border-[--border-strong] hover:shadow-[--shadow-sm]",
+            "ai": "bg-[--ai-surface] border border-[--ai-border] border-l-[3px] border-l-[--accent] rounded-[--r-lg] p-5",
+            "ai_rule": "EVERY AI card MUST include: (1) 'Prodify' badge top-right, (2) thumbs feedback row at bottom. Non-negotiable.",
+            "focused": "border-2 border-[--accent] shadow-[0_0_0_4px_rgba(99,102,241,0.08)]"
+        },
+        "badge": {
+            "base_css": "inline-flex items-center gap-1 px-1.5 py-0.5 text-[11px] font-medium rounded-[--r-sm]",
+            "variants": {
+                "default": "bg-[--surface-2] text-[--text-2] border border-[--border]",
+                "accent": "bg-[--accent-subtle] text-[--accent]",
+                "success": "bg-[--success-subtle] text-[--success]",
+                "warning": "bg-[--warning-subtle] text-[--warning]",
+                "danger": "bg-[--danger-subtle] text-[--danger]",
+                "ai": "bg-[--ai-surface] text-[--accent] border border-[--ai-border]"
+            }
+        },
+        "nav_item": {
+            "base_css": "flex items-center gap-2.5 h-8 px-2.5 rounded-[--r-md] text-[14px] font-medium text-[--text-2] transition-all duration-[--dur-fast] cursor-pointer select-none",
+            "hover": "hover:bg-[--surface-2] hover:text-[--text-1]",
+            "active": "bg-[--accent-subtle] text-[--accent]",
+            "icon": "w-4 h-4 flex-shrink-0 stroke-[1.5]",
+            "section_label": "px-2.5 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-[0.07em] text-[--text-3]"
+        },
+        "command_palette": {
+            "trigger": "Cmd+K / Ctrl+K \u2014 every screen, no exceptions",
+            "overlay": "fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center pt-[15vh]",
+            "panel": "w-[min(600px,90vw)] bg-[--surface] border border-[--border] rounded-[--r-xl] shadow-[--shadow-cmd] overflow-hidden",
+            "input": "w-full px-5 py-4 text-[16px] bg-transparent border-b border-[--border] text-[--text-1] placeholder:text-[--text-3] focus:outline-none",
+            "item": "flex items-center gap-3 px-3 py-2.5 mx-2 rounded-[--r-md] text-[14px] text-[--text-2] cursor-pointer",
+            "item_active": "bg-[--accent-subtle] text-[--accent]"
+        },
+        "ai_output_block": {
+            "wrapper": "ai-block bg-[--ai-surface] border border-[--ai-border] border-l-[3px] border-l-[--accent] rounded-[--r-lg] p-5",
+            "header": "flex items-center justify-between mb-3",
+            "label": "Prodify badge \u2014 badge variant 'ai', text 'Prodify', top-right of header",
+            "body_font": "font-[--font-sans] text-[15px] leading-[1.75] text-[--text-2]",
+            "streaming": "append blinking | cursor \u2014 CSS: @keyframes blink { 50% { opacity: 0 } } \u2014 1s step-end infinite. Color: --accent",
+            "feedback": "thumbs-up / thumbs-down ghost icon buttons, bottom-right of block. Always present.",
+            "rule": "Never use the word 'AI' in the UI. Say 'Prodify'. Never use a robot icon."
+        },
+        "skeleton": {
+            "css": "animate-pulse bg-[--surface-2] rounded-[--r-md]",
+            "rule": "Match shape exactly to the content it replaces. Never use spinners."
+        },
+        "kbd": {
+            "css": "inline-flex items-center px-1.5 py-0.5 text-[11px] font-mono text-[--text-3] bg-[--surface-2] border border-[--border] rounded-[--r-sm]",
+            "rule": "All primary actions must show their keyboard shortcut in the UI \u2014 inside the button or as a trailing <kbd> element."
+        },
+        "divider": {
+            "css": "border-t border-[--border] my-4"
+        },
+        "topbar": {
+            "css": "h-11 border-b border-[--border] bg-[--surface] flex items-center px-4 gap-3",
+            "rule": "Contains: app logo left, breadcrumb center, user avatar + theme toggle right."
+        }
+    },
+    "screens": {
+        "_build_order": [
+            "dashboard",
+            "prd_editor",
+            "research",
+            "prioritisation"
+        ],
+        "_demo_scenario": "Priya, PM at a fintech startup. Uploads 3 user interview transcripts. Asks 'What should we build next?' \u2192 Prodify synthesises insights \u2192 generates a structured PRD \u2192 prioritises 5 features by impact.",
+        "dashboard": {
+            "layout": "3 stat cards (top row) + recent activity feed (60%) + quick actions panel (40%)",
+            "stat_cards": [
+                "Active PRDs",
+                "Interviews Processed",
+                "Features Suggested"
+            ],
+            "quick_actions": [
+                "New PRD (Cmd+N)",
+                "Upload Interview (Cmd+U)",
+                "Ask Prodify (Cmd+K)"
+            ],
+            "empty_state": "Single large ghost button 'Start your first project' with Zap icon. No illustrations."
+        },
+        "prd_editor": {
+            "layout": "Full-width doc editor. Right AI panel slides in on generation.",
+            "slash_command": "/generate triggers inline AI generation",
+            "toolbar": "Floating on text selection: Bold, H2, H3, Link, Comment only. No full toolbar bar.",
+            "ai_insertion": "Generated content = AI card. User can Accept (inserts to doc) / Reject / Regenerate.",
+            "autosave": "Every 5s. Top-right: teal dot + 'Saved' text, fades after 2s."
+        },
+        "research": {
+            "upload": "Drag-drop zone for .txt / .pdf / .vtt transcripts. Shows file count.",
+            "query_input": "Bottom of panel. Natural language. E.g. 'Top 3 pain points?' \u2192 AI Card response.",
+            "insight_cards": "AI Card per insight. Includes: insight text, supporting quote (collapsible), confidence (High / Medium \u2014 2 states only)."
+        },
+        "prioritisation": {
+            "view": "Kanban \u2014 3 columns: Backlog / Considering / Committed. Drag-drop.",
+            "feature_card": "Shows: feature name, AI impact score 1\u201310 (indigo bar), source tag.",
+            "ai_action": "Floating 'Prioritise for me' button \u2192 animated reorder via Framer Motion."
+        }
+    },
+    "motion": {
+        "entry": "translateY(6px)\u21920 + opacity 0\u21921, 280ms --ease-out. For panels, cards, AI blocks.",
+        "state_change": "160ms --ease-io. For tabs, toggles.",
+        "hover_micro": "100ms ease. For buttons, nav items.",
+        "success": "scale 0\u21921.1\u21921 in 240ms, --success color. Teal checkmark only.",
+        "page_transition": "Fade only (opacity 0\u21921, 160ms). Never slide.",
+        "reduced_motion": "@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }"
+    },
+    "icons": {
+        "library": "Lucide React \u2014 ONLY this library",
+        "sizes": "16px for UI, 20px for section headers",
+        "stroke": "1.5 always",
+        "key_icons": {
+            "Zap": "AI actions, generate, trigger Prodify",
+            "FileText": "PRD, document",
+            "Users": "Research, interviews",
+            "Lightbulb": "Insights, ideas",
+            "GitBranch": "Roadmap, prioritisation",
+            "MessageSquare": "Comments, feedback",
+            "Search": "Search, Cmd+K trigger",
+            "ChevronRight": "Expand, navigate",
+            "MoreHorizontal": "Options menu"
+        },
+        "rules": [
+            "No emoji as icons",
+            "No filled/solid icons \u2014 stroke only",
+            "No resizing outside 16px / 20px"
+        ]
+    },
+    "rules": {
+        "do": [
+            "Use CSS variables for every color \u2014 never hardcode hex",
+            "Use Geist font family only",
+            "4px spacing grid \u2014 multiples of 4 only",
+            "Skeleton loaders for all async content",
+            "Cmd+K command palette accessible on every screen",
+            "Dark mode via [data-theme='dark'] on <html>",
+            "All primary actions must show keyboard shortcuts in UI",
+            "AI content always in AI cards with Prodify badge + feedback",
+            "prefers-reduced-motion respected globally"
+        ],
+        "dont": [
+            "Hardcode any hex value",
+            "Use Inter, Roboto, Arial, or system fonts",
+            "Use Tailwind dark: prefix \u2014 use CSS variables instead",
+            "Use spinners \u2014 use skeleton loaders",
+            "Use emoji as icons",
+            "Use arbitrary spacing (7px, 13px, 22px, etc.)",
+            "Use the word 'AI' in any visible UI copy \u2014 say 'Prodify'",
+            "Use a robot icon anywhere",
+            "Use bounce, spring, or elastic animation easings",
+            "Use modals for non-critical errors \u2014 use inline toast/badge",
+            "Use more than 3 typeface weights in any single screen"
+        ]
+    },
+    "css_base": "/* Paste into your global CSS */\n\n:root {\n  --bg: #FAFAFA; --surface: #FFFFFF; --surface-2: #F4F4F5;\n  --border: #E4E4E7; --border-strong: #D4D4D8;\n  --text-1: #09090B; --text-2: #3F3F46; --text-3: #A1A1AA;\n  --accent: #6366F1; --accent-hover: #4F46E5; --accent-subtle: #EEF2FF;\n  --ai-surface: #F5F3FF; --ai-border: #C4B5FD;\n  --success: #059669; --success-subtle: #ECFDF5;\n  --warning: #D97706; --warning-subtle: #FFFBEB;\n  --danger: #DC2626; --danger-subtle: #FEF2F2;\n  --font-sans: 'Geist', system-ui, sans-serif;\n  --font-mono: 'Geist Mono', monospace;\n  --r-sm: 4px; --r-md: 6px; --r-lg: 10px; --r-xl: 14px; --r-full: 9999px;\n  --s-1:4px;--s-2:8px;--s-3:12px;--s-4:16px;--s-5:20px;--s-6:24px;--s-8:32px;\n  --ease-out: cubic-bezier(0.16,1,0.3,1);\n  --ease-io: cubic-bezier(0.65,0,0.35,1);\n  --dur-fast: 100ms; --dur-base: 160ms; --dur-slow: 280ms;\n}\n\n[data-theme='dark'] {\n  --bg: #09090B; --surface: #111113; --surface-2: #18181B;\n  --border: #27272A; --border-strong: #3F3F46;\n  --text-1: #FAFAFA; --text-2: #A1A1AA; --text-3: #52525B;\n  --accent: #818CF8; --accent-hover: #6366F1; --accent-subtle: #1E1B4B;\n  --ai-surface: #13111C; --ai-border: #4C1D95;\n  --success: #10B981; --success-subtle: #022C22;\n  --warning: #F59E0B; --warning-subtle: #1C1400;\n  --danger: #EF4444; --danger-subtle: #2D0707;\n}\n\n*, *::before, *::after { box-sizing: border-box; }\nbody { font-family: var(--font-sans); background: var(--bg); color: var(--text-1); }\n@media (prefers-reduced-motion: reduce) {\n  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }\n}"
+}

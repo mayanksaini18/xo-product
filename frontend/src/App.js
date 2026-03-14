@@ -77,7 +77,7 @@ function SimpleLineChart({ data }) {
     const range = max - min || 1;
     
     // Draw line
-    ctx.strokeStyle = '#ffffff';
+    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#818CF8';
     ctx.lineWidth = 2;
     ctx.beginPath();
     
@@ -129,12 +129,15 @@ function App() {
   const showToast = (message) => {
     const toast = document.createElement('div');
     toast.textContent = message;
-    toast.style.cssText = 'position:fixed;top:20px;right:20px;background:#1a1a1a;color:white;padding:12px 20px;border-radius:8px;border:1px solid #2a2a2a;z-index:9999;animation:fadeIn 0.3s;';
+    const bg = getComputedStyle(document.documentElement).getPropertyValue('--surface').trim();
+    const text = getComputedStyle(document.documentElement).getPropertyValue('--text-1').trim();
+    const border = getComputedStyle(document.documentElement).getPropertyValue('--border').trim();
+    toast.style.cssText = `position:fixed;top:20px;right:20px;background:${bg};color:${text};padding:12px 20px;border-radius:var(--r-lg);border:1px solid ${border};z-index:9999;animation:fadeIn 0.28s var(--ease-out);box-shadow:var(--shadow-md);font-size:13px;`;
     document.body.appendChild(toast);
     setTimeout(() => {
       toast.style.opacity = '0';
-      toast.style.transition = 'opacity 0.3s';
-      setTimeout(() => toast.remove(), 300);
+      toast.style.transition = 'opacity var(--dur-base)';
+      setTimeout(() => toast.remove(), 160);
     }, 3000);
   };
   
@@ -338,7 +341,7 @@ function App() {
   };
   
   return (
-    <div className="flex h-screen bg-black text-white overflow-hidden">
+    <div className="flex h-screen text-[var(--text-1)] overflow-hidden" style={{ background: 'var(--bg)' }}>
       {/* Sidebar */}
       {!isMobile && (
         <Sidebar 
@@ -402,7 +405,7 @@ function App() {
   );
 }
 
-// Sidebar Component
+// Sidebar Component  
 function Sidebar({ activeView, setActiveView, schema }) {
   const navItems = [
     { id: 'chat', label: 'Chat', icon: '💬' },
@@ -412,14 +415,14 @@ function Sidebar({ activeView, setActiveView, schema }) {
   ];
   
   return (
-    <div className="w-60 bg-[#0a0a0a] border-r border-[#2a2a2a] flex flex-col">
+    <div className="w-60 flex flex-col" style={{ background: 'var(--surface)', borderRight: '1px solid var(--border)' }}>
       {/* Logo */}
-      <div className="p-6 border-b border-[#2a2a2a]">
+      <div className="p-6" style={{ borderBottom: '1px solid var(--border)' }}>
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-lg">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center text-lg" style={{ background: 'var(--accent)' }}>
             📈
           </div>
-          <span className="text-lg font-semibold">PulseTrack</span>
+          <span className="text-lg font-semibold" style={{ color: 'var(--text-1)' }}>PulseTrack</span>
         </div>
       </div>
       
@@ -429,11 +432,24 @@ function Sidebar({ activeView, setActiveView, schema }) {
           <button
             key={item.id}
             onClick={() => setActiveView(item.id)}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-              activeView === item.id
-                ? 'bg-white text-black'
-                : 'text-[#a3a3a3] hover:bg-[#1a1a1a] hover:text-white'
-            }`}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium`}
+            style={{
+              background: activeView === item.id ? 'var(--accent-subtle)' : 'transparent',
+              color: activeView === item.id ? 'var(--accent)' : 'var(--text-2)',
+              transition: 'all var(--dur-fast)'
+            }}
+            onMouseEnter={(e) => {
+              if (activeView !== item.id) {
+                e.target.style.background = 'var(--surface-2)';
+                e.target.style.color = 'var(--text-1)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (activeView !== item.id) {
+                e.target.style.background = 'transparent';
+                e.target.style.color = 'var(--text-2)';
+              }
+            }}
           >
             <span className="text-base">{item.icon}</span>
             <span>{item.label}</span>
@@ -442,19 +458,19 @@ function Sidebar({ activeView, setActiveView, schema }) {
       </nav>
       
       {/* Bottom Section */}
-      <div className="p-4 border-t border-[#2a2a2a] space-y-3">
+      <div className="p-4 space-y-3" style={{ borderTop: '1px solid var(--border)' }}>
         <div className="flex items-center gap-2 text-xs">
-          <span className="w-2 h-2 rounded-full bg-white"></span>
-          <span className="text-[#a3a3a3]">Connected to Claude</span>
+          <span className="w-2 h-2 rounded-full" style={{ background: 'var(--success)' }}></span>
+          <span style={{ color: 'var(--text-3)' }}>Connected to Claude</span>
         </div>
         
-        <div className="px-3 py-2 bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg">
-          <div className="text-xs font-medium text-[#a3a3a3]">Schema Status</div>
+        <div className="px-3 py-2 rounded-lg" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+          <div className="text-xs font-medium" style={{ color: 'var(--text-3)' }}>Schema Status</div>
           <div className="text-sm font-semibold mt-0.5">
             {schema.tables.length > 0 ? (
-              <span className="text-white">✓ {schema.tables.length} tables loaded</span>
+              <span style={{ color: 'var(--success)' }}>✓ {schema.tables.length} tables loaded</span>
             ) : (
-              <span className="text-[#666666]">No schema loaded</span>
+              <span style={{ color: 'var(--text-3)' }}>No schema loaded</span>
             )}
           </div>
         </div>

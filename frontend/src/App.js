@@ -1,11 +1,30 @@
 import { useState, useEffect, useRef } from "react";
+import { 
+  MessageSquare, 
+  Activity, 
+  Bell, 
+  Database, 
+  Zap, 
+  TrendingUp, 
+  TrendingDown,
+  Copy,
+  ChevronDown,
+  ChevronRight,
+  Send,
+  Loader2,
+  CheckCircle2,
+  AlertTriangle,
+  XCircle,
+  X
+} from 'lucide-react';
+import "@/App.css";
 
 // Constants
 const API_KEY = 'sk-emergent-cEd44295e39AeF6A2F';
 const MODEL = 'claude-sonnet-4-20250514';
 const API_URL = 'https://api.anthropic.com/v1/messages';
 
-const SYSTEM_PROMPT = "You are an AI-powered Product Metrics Tracking Assistant embedded in a product analytics tool. Your job is to translate natural language product questions into SQL queries, detect anomalies in metrics, suggest insights, and help configure automated metric tracking. When you provide SQL queries, wrap them in ```sql code blocks. When suggesting follow-up questions, prefix them with emoji numbers like 1️⃣, 2️⃣, 3️⃣. When you identify a trackable metric, include a JSON block with a tracking_id field.";
+const SYSTEM_PROMPT = "You are an AI-powered Product Metrics Tracking Assistant embedded in a product analytics tool. Your job is to translate natural language product questions into SQL queries, detect anomalies in metrics, suggest insights, and help configure automated metric tracking. When you provide SQL queries, wrap them in ```sql code blocks. When suggesting follow-up questions, prefix them with numbers like 1️⃣, 2️⃣, 3️⃣.";
 
 const SAMPLE_SCHEMA = `CREATE TABLE users (
   id SERIAL PRIMARY KEY,
@@ -41,11 +60,7 @@ CREATE TABLE products (
 
 // Utility Functions
 const generateId = () => Math.random().toString(36).substr(2, 9);
-
-const copyToClipboard = (text) => {
-  navigator.clipboard.writeText(text);
-};
-
+const copyToClipboard = (text) => navigator.clipboard.writeText(text);
 const formatTimestamp = (date) => {
   return new Intl.DateTimeFormat('en-US', {
     month: 'short',
@@ -55,8 +70,8 @@ const formatTimestamp = (date) => {
   }).format(date);
 };
 
-// Simple Line Chart Component (fallback without Recharts)
-function SimpleLineChart({ data }) {
+// Premium Line Chart Component
+function PremiumLineChart({ data }) {
   const canvasRef = useRef(null);
   
   useEffect(() => {
@@ -67,37 +82,69 @@ function SimpleLineChart({ data }) {
     const width = canvas.width;
     const height = canvas.height;
     
-    // Clear canvas
     ctx.clearRect(0, 0, width, height);
     
-    // Get values
     const values = data.map(d => d.value);
     const max = Math.max(...values);
     const min = Math.min(...values);
     const range = max - min || 1;
     
-    // Draw line
-    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#818CF8';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
+    // Draw gradient
+    const gradient = ctx.createLinearGradient(0, 0, 0, height);
+    gradient.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
+    gradient.addColorStop(1, 'rgba(255, 255, 255, 0.05)');
     
+    ctx.beginPath();
     data.forEach((point, i) => {
       const x = (i / (data.length - 1)) * width;
       const y = height - ((point.value - min) / range) * height;
-      
-      if (i === 0) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
-      }
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
     });
+    ctx.lineTo(width, height);
+    ctx.lineTo(0, height);
+    ctx.closePath();
+    ctx.fillStyle = gradient;
+    ctx.fill();
     
+    // Draw line
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    data.forEach((point, i) => {
+      const x = (i / (data.length - 1)) * width;
+      const y = height - ((point.value - min) / range) * height;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
     ctx.stroke();
   }, [data]);
   
   return <canvas ref={canvasRef} width={300} height={64} className="w-full h-full" />;
 }
 
+// Toast Notification Component
+function Toast({ message, type = 'success', onClose }) {
+  const icons = {
+    success: <CheckCircle2 size={16} />,
+    warning: <AlertTriangle size={16} />,
+    error: <XCircle size={16} />
+  };
+  
+  return (
+    <div className="fixed bottom-6 right-6 z-50 scale-in">
+      <div className="flex items-center gap-3 px-4 py-3 rounded-lg glass border border-white/10 shadow-xl">
+        <span className="text-white">{icons[type]}</span>
+        <span className="text-sm text-white">{message}</span>
+        <button onClick={onClose} className="ml-2 text-white/60 hover:text-white transition-colors">
+          <X size={14} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Main App Component
 function App() {
   const [activeView, setActiveView] = useState('chat');
   const [schema, setSchema] = useState({ raw: '', tables: [], relationships: [] });
@@ -113,6 +160,15 @@ function App() {
   const [schemaInput, setSchemaInput] = useState('');
   const [selectedMetric, setSelectedMetric] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [toast, setToast] = useState(null);
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  
+  const placeholders = [
+    "Ask about product metrics...",
+    "Check user growth trends",
+    "Detect anomalies after deploy",
+    "Analyze conversion funnel"
+  ];
   
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -120,25 +176,22 @@ function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
   
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPlaceholderIndex((prev) => (prev + 1) % placeholders.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+  
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+  
   const generateSparklineData = (baseValue, points) => {
     return Array.from({ length: points }, (_, i) => ({
       value: baseValue * (0.85 + Math.random() * 0.3)
     }));
-  };
-  
-  const showToast = (message) => {
-    const toast = document.createElement('div');
-    toast.textContent = message;
-    const bg = getComputedStyle(document.documentElement).getPropertyValue('--surface').trim();
-    const text = getComputedStyle(document.documentElement).getPropertyValue('--text-1').trim();
-    const border = getComputedStyle(document.documentElement).getPropertyValue('--border').trim();
-    toast.style.cssText = `position:fixed;top:20px;right:20px;background:${bg};color:${text};padding:12px 20px;border-radius:var(--r-lg);border:1px solid ${border};z-index:9999;animation:fadeIn 0.28s var(--ease-out);box-shadow:var(--shadow-md);font-size:13px;`;
-    document.body.appendChild(toast);
-    setTimeout(() => {
-      toast.style.opacity = '0';
-      toast.style.transition = 'opacity var(--dur-base)';
-      setTimeout(() => toast.remove(), 160);
-    }, 3000);
   };
   
   const loadDemoMode = () => {
@@ -155,6 +208,7 @@ function App() {
         status: 'ok',
         currentValue: 1247,
         trend: 'up',
+        change: '+12%',
         lastChecked: new Date(),
         history: generateSparklineData(1247, 24)
       },
@@ -167,6 +221,7 @@ function App() {
         status: 'warning',
         currentValue: 2.4,
         trend: 'up',
+        change: '+0.3%',
         lastChecked: new Date(),
         history: generateSparklineData(2.4, 24)
       },
@@ -179,13 +234,14 @@ function App() {
         status: 'ok',
         currentValue: 12450,
         trend: 'up',
+        change: '+8.2%',
         lastChecked: new Date(),
         history: generateSparklineData(12450, 24)
       }
     ];
     
     setTrackedMetrics(sampleMetrics);
-    showToast('Demo mode loaded with sample schema and metrics');
+    showToast('Demo mode loaded with sample data', 'success');
   };
   
   const analyzeSchema = async (schemaText) => {
@@ -324,6 +380,7 @@ function App() {
           ? { ...msg, content: `Error: ${error.message}`, isStreaming: false }
           : msg
       ));
+      showToast('Failed to connect to Claude', 'error');
     } finally {
       setIsStreaming(false);
     }
@@ -334,14 +391,10 @@ function App() {
       e.preventDefault();
       sendMessage(inputValue);
     }
-    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-      e.preventDefault();
-      document.querySelector('textarea')?.focus();
-    }
   };
   
   return (
-    <div className="flex h-screen text-[var(--text-1)] overflow-hidden" style={{ background: 'var(--bg)' }}>
+    <div className="flex h-screen bg-black text-white overflow-hidden">
       {/* Sidebar */}
       {!isMobile && (
         <Sidebar 
@@ -364,6 +417,7 @@ function App() {
             schema={schema}
             setActiveView={setActiveView}
             loadDemoMode={loadDemoMode}
+            placeholder={placeholders[placeholderIndex]}
           />
         )}
         
@@ -397,80 +451,91 @@ function App() {
         )}
       </div>
       
-      {/* Mobile Bottom Tabs */}
+      {/* Mobile Bottom Nav */}
       {isMobile && (
         <MobileTabBar activeView={activeView} setActiveView={setActiveView} />
+      )}
+      
+      {/* Toast Notifications */}
+      {toast && (
+        <Toast 
+          message={toast.message} 
+          type={toast.type} 
+          onClose={() => setToast(null)} 
+        />
       )}
     </div>
   );
 }
 
-// Sidebar Component  
+// Premium Sidebar Component
 function Sidebar({ activeView, setActiveView, schema }) {
   const navItems = [
-    { id: 'chat', label: 'Chat', icon: '💬' },
-    { id: 'metrics', label: 'Tracked Metrics', icon: '📊' },
-    { id: 'alerts', label: 'Alerts & Notifications', icon: '🔔' },
-    { id: 'schema', label: 'Schema Manager', icon: '🗄️' },
+    { id: 'chat', label: 'Chat', icon: MessageSquare },
+    { id: 'metrics', label: 'Tracked Metrics', icon: Activity },
+    { id: 'alerts', label: 'Alerts', icon: Bell },
+    { id: 'schema', label: 'Schema', icon: Database },
   ];
   
   return (
-    <div className="w-60 flex flex-col" style={{ background: 'var(--surface)', borderRight: '1px solid var(--border)' }}>
+    <div className="w-60 h-full flex flex-col glass border-r border-white/10">
       {/* Logo */}
-      <div className="p-6" style={{ borderBottom: '1px solid var(--border)' }}>
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center text-lg" style={{ background: 'var(--accent)' }}>
-            📈
+      <div className="p-6 border-b border-white/10">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
+            <Activity className="w-5 h-5 text-black" />
           </div>
-          <span className="text-lg font-semibold" style={{ color: 'var(--text-1)' }}>PulseTrack</span>
+          <span className="text-lg font-semibold tracking-tight">PulseTrack</span>
         </div>
       </div>
       
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-1">
-        {navItems.map(item => (
-          <button
-            key={item.id}
-            onClick={() => setActiveView(item.id)}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium`}
-            style={{
-              background: activeView === item.id ? 'var(--accent-subtle)' : 'transparent',
-              color: activeView === item.id ? 'var(--accent)' : 'var(--text-2)',
-              transition: 'all var(--dur-fast)'
-            }}
-            onMouseEnter={(e) => {
-              if (activeView !== item.id) {
-                e.target.style.background = 'var(--surface-2)';
-                e.target.style.color = 'var(--text-1)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (activeView !== item.id) {
-                e.target.style.background = 'transparent';
-                e.target.style.color = 'var(--text-2)';
-              }
-            }}
-          >
-            <span className="text-base">{item.icon}</span>
-            <span>{item.label}</span>
-          </button>
-        ))}
+      <nav className="flex-1 p-3 space-y-1">
+        {navItems.map((item, index) => {
+          const Icon = item.icon;
+          const isActive = activeView === item.id;
+          
+          return (
+            <button
+              key={item.id}
+              onClick={() => setActiveView(item.id)}
+              className={`
+                w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
+                transition-all duration-200 slide-in
+                ${isActive 
+                  ? 'bg-white text-black shadow-md' 
+                  : 'text-gray-400 hover:text-white hover:bg-white/5'
+                }
+              `}
+              style={{ animationDelay: `${index * 50}ms` }}
+            >
+              {isActive && (
+                <div className="absolute left-0 w-1 h-6 bg-white rounded-r-full" />
+              )}
+              <Icon size={16} strokeWidth={2} />
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
       </nav>
       
       {/* Bottom Section */}
-      <div className="p-4 space-y-3" style={{ borderTop: '1px solid var(--border)' }}>
-        <div className="flex items-center gap-2 text-xs">
-          <span className="w-2 h-2 rounded-full" style={{ background: 'var(--success)' }}></span>
-          <span style={{ color: 'var(--text-3)' }}>Connected to Claude</span>
+      <div className="p-4 border-t border-white/10 space-y-3">
+        <div className="flex items-center gap-2 text-xs text-gray-400">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+          </span>
+          <span>Connected to Claude</span>
         </div>
         
-        <div className="px-3 py-2 rounded-lg" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-          <div className="text-xs font-medium" style={{ color: 'var(--text-3)' }}>Schema Status</div>
-          <div className="text-sm font-semibold mt-0.5">
+        <div className="px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg">
+          <div className="text-xs font-medium text-gray-400 mb-1">Schema Status</div>
+          <div className="text-sm font-semibold">
             {schema.tables.length > 0 ? (
-              <span style={{ color: 'var(--success)' }}>✓ {schema.tables.length} tables loaded</span>
+              <span className="text-white">{schema.tables.length} tables loaded</span>
             ) : (
-              <span style={{ color: 'var(--text-3)' }}>No schema loaded</span>
+              <span className="text-gray-500">No schema</span>
             )}
           </div>
         </div>
@@ -480,7 +545,7 @@ function Sidebar({ activeView, setActiveView, schema }) {
 }
 
 // Chat View Component
-function ChatView({ messages, isStreaming, inputValue, setInputValue, sendMessage, handleKeyDown, schema, setActiveView, loadDemoMode }) {
+function ChatView({ messages, isStreaming, inputValue, setInputValue, sendMessage, handleKeyDown, schema, setActiveView, loadDemoMode, placeholder }) {
   const messagesEndRef = useRef(null);
   
   useEffect(() => {
@@ -490,20 +555,20 @@ function ChatView({ messages, isStreaming, inputValue, setInputValue, sendMessag
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="px-8 py-6 border-b border-[#2a2a2a]">
+      <div className="px-8 py-6 border-b border-white/10 backdrop-blur-sm bg-black/50">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold mb-1">Ask anything about your product</h1>
-            <p className="text-sm text-[#a3a3a3]">Natural language → SQL → Insights</p>
+            <p className="text-sm text-gray-400">Natural language → SQL → Insights</p>
           </div>
           <div>
             {schema.tables.length > 0 ? (
               <span className="px-3 py-1.5 bg-white/10 text-white border border-white/20 rounded-full text-xs font-medium">
-                ✓ Schema loaded — {schema.tables.length} tables
+                ✓ {schema.tables.length} tables
               </span>
             ) : (
-              <span className="px-3 py-1.5 bg-[#1a1a1a] text-[#666666] border border-[#2a2a2a] rounded-full text-xs font-medium">
-                No schema loaded
+              <span className="px-3 py-1.5 bg-white/5 text-gray-500 border border-white/10 rounded-full text-xs font-medium">
+                No schema
               </span>
             )}
           </div>
@@ -516,37 +581,43 @@ function ChatView({ messages, isStreaming, inputValue, setInputValue, sendMessag
           <WelcomeCard setActiveView={setActiveView} loadDemoMode={loadDemoMode} />
         ) : (
           <div className="max-w-4xl mx-auto space-y-6">
-            {messages.map((msg) => (
-              <Message key={msg.id} message={msg} sendMessage={sendMessage} />
+            {messages.map((msg, idx) => (
+              <Message key={msg.id} message={msg} sendMessage={sendMessage} index={idx} />
             ))}
             <div ref={messagesEndRef} />
           </div>
         )}
       </div>
       
-      {/* Input Area */}
-      <div className="px-8 py-6 border-t border-[#2a2a2a]">
+      {/* Premium Input Area */}
+      <div className="px-8 py-6 border-t border-white/10 backdrop-blur-sm bg-black/50">
         <div className="max-w-4xl mx-auto">
-          <div className="relative flex items-end gap-3 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl p-3 focus-within:border-white/40 transition-colors">
+          <div className="relative flex items-end gap-3 glass rounded-xl p-3 border border-white/10 glow-on-hover">
             <textarea
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask about your metrics… e.g. 'Did error rate spike after the deploy?'"
-              className="flex-1 bg-transparent text-white placeholder-[#666666] outline-none text-sm max-h-24 min-h-[40px] resize-none"
+              placeholder={placeholder}
+              className="flex-1 bg-transparent text-white placeholder-gray-500 outline-none text-sm max-h-32 min-h-[40px] resize-none"
               rows={1}
               disabled={isStreaming}
+              style={{ transition: 'all 0.3s' }}
             />
             <button
               onClick={() => sendMessage(inputValue)}
               disabled={isStreaming || !inputValue.trim()}
-              className="px-4 py-2 bg-white text-black rounded-lg text-sm font-medium hover:bg-[#e5e5e5] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="btn-hover px-4 py-2 bg-white text-black rounded-lg text-sm font-medium disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              {isStreaming ? '...' : 'Send'}
+              {isStreaming ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Send size={16} />
+              )}
+              <span>Send</span>
             </button>
           </div>
-          <div className="text-xs text-[#666666] mt-2 text-center">
-            Press <kbd className="px-1.5 py-0.5 bg-[#1a1a1a] border border-[#2a2a2a] rounded">⌘ + Enter</kbd> to send • <kbd className="px-1.5 py-0.5 bg-[#1a1a1a] border border-[#2a2a2a] rounded">⌘ + K</kbd> to focus
+          <div className="text-xs text-gray-500 mt-2 text-center">
+            Press <kbd className="px-1.5 py-0.5 bg-white/5 border border-white/10 rounded text-gray-400">⌘ + Enter</kbd> to send
           </div>
         </div>
       </div>
@@ -558,24 +629,25 @@ function ChatView({ messages, isStreaming, inputValue, setInputValue, sendMessag
 function WelcomeCard({ setActiveView, loadDemoMode }) {
   return (
     <div className="flex items-center justify-center h-full">
-      <div className="text-center max-w-md">
-        <div className="w-16 h-16 bg-white rounded-2xl mx-auto mb-4 flex items-center justify-center text-3xl">
-          📊
+      <div className="text-center max-w-md fade-in">
+        <div className="w-16 h-16 bg-white/10 backdrop-blur-sm rounded-2xl mx-auto mb-6 flex items-center justify-center border border-white/20">
+          <Zap className="w-8 h-8 text-white" />
         </div>
-        <h2 className="text-2xl font-semibold mb-2">Track your feature's impact</h2>
-        <p className="text-[#a3a3a3] mb-6">
+        <h2 className="text-2xl font-semibold mb-3">Track your feature's impact</h2>
+        <p className="text-gray-400 mb-8 leading-relaxed">
           Paste your SQL schema to start analyzing your product metrics with AI.
         </p>
         <div className="flex flex-col gap-3">
           <button
             onClick={() => setActiveView('schema')}
-            className="px-6 py-3 bg-white text-black rounded-lg font-medium hover:bg-[#e5e5e5] transition-colors"
+            className="btn-hover px-6 py-3 bg-white text-black rounded-lg font-medium flex items-center justify-center gap-2 shadow-xl"
           >
-            Load SQL Schema →
+            <Database size={18} />
+            Load SQL Schema
           </button>
           <button
             onClick={loadDemoMode}
-            className="px-6 py-3 bg-[#1a1a1a] text-white border border-[#2a2a2a] rounded-lg font-medium hover:bg-[#252525] transition-colors"
+            className="btn-hover px-6 py-3 bg-white/5 text-white border border-white/10 rounded-lg font-medium hover:bg-white/10"
           >
             Try with sample schema
           </button>
@@ -585,25 +657,25 @@ function WelcomeCard({ setActiveView, loadDemoMode }) {
   );
 }
 
-// Message Component
-function Message({ message, sendMessage }) {
+// Message Component  
+function Message({ message, sendMessage, index }) {
   if (message.role === 'user') {
     return (
-      <div className="flex justify-end">
-        <div className="max-w-[80%] bg-white text-black px-4 py-3 rounded-2xl rounded-tr-sm">
+      <div className="flex justify-end fade-in" style={{ animationDelay: `${index * 50}ms` }}>
+        <div className="max-w-[70%] bg-white text-black px-5 py-3 rounded-2xl rounded-tr-md shadow-xl">
           <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-          <div className="text-xs opacity-60 mt-1">{formatTimestamp(message.timestamp)}</div>
+          <div className="text-xs opacity-50 mt-2">{formatTimestamp(message.timestamp)}</div>
         </div>
       </div>
     );
   }
   
   return (
-    <div className="flex justify-start">
-      <div className="max-w-[85%] bg-[#1a1a1a] border border-[#2a2a2a] px-5 py-4 rounded-2xl rounded-tl-sm">
+    <div className="flex justify-start fade-in" style={{ animationDelay: `${index * 50}ms` }}>
+      <div className="max-w-[80%] glass border border-white/10 px-6 py-4 rounded-2xl rounded-tl-md shadow-xl">
         <RichMessageContent content={message.content} sendMessage={sendMessage} />
-        {message.isStreaming && <span className="inline-block w-2 h-4 bg-white animate-pulse ml-1">▊</span>}
-        <div className="text-xs text-[#666666] mt-2">{formatTimestamp(message.timestamp)}</div>
+        {message.isStreaming && <span className="inline-block w-0.5 h-4 bg-white ml-1 cursor-blink">|</span>}
+        <div className="text-xs text-gray-500 mt-3">{formatTimestamp(message.timestamp)}</div>
       </div>
     </div>
   );
@@ -643,7 +715,7 @@ function RichMessageContent({ content, sendMessage }) {
   }
   
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {parts.map((part, idx) => {
         if (part.type === 'sql') {
           return <SQLBlock key={idx} sql={part.sql} />;
@@ -668,19 +740,20 @@ function SQLBlock({ sql }) {
   };
   
   return (
-    <div className="relative my-3">
-      <div className="bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg overflow-hidden">
-        <div className="flex items-center justify-between px-3 py-2 bg-black border-b border-[#2a2a2a]">
-          <span className="text-xs font-medium text-[#a3a3a3]">SQL</span>
+    <div className="relative my-4">
+      <div className="bg-black/50 border border-white/10 rounded-lg overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-2 bg-white/5 border-b border-white/10">
+          <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">SQL Query</span>
           <button
             onClick={handleCopy}
-            className="text-xs px-2 py-1 bg-[#1a1a1a] text-white border border-[#2a2a2a] rounded hover:bg-[#252525] transition-colors"
+            className="btn-hover text-xs px-3 py-1 bg-white/10 text-white border border-white/10 rounded hover:bg-white/20 transition-all flex items-center gap-1.5"
           >
-            {copied ? '✓ Copied' : 'Copy SQL'}
+            {copied ? <CheckCircle2 size={12} /> : <Copy size={12} />}
+            {copied ? 'Copied' : 'Copy'}
           </button>
         </div>
-        <pre className="p-4 text-xs overflow-x-auto">
-          <code className="text-white font-mono">{sql}</code>
+        <pre className="p-4 text-xs overflow-x-auto font-mono leading-relaxed">
+          <code className="text-white">{sql}</code>
         </pre>
       </div>
     </div>
@@ -692,15 +765,16 @@ function JSONBlock({ json }) {
   const [isExpanded, setIsExpanded] = useState(false);
   
   return (
-    <div className="my-3">
+    <div className="my-4">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full text-left px-3 py-2 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg text-xs font-medium text-[#a3a3a3] hover:bg-[#1a1a1a] transition-colors"
+        className="w-full text-left px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-xs font-medium text-gray-400 hover:bg-white/10 transition-all flex items-center gap-2"
       >
-        {isExpanded ? '▼' : '▶'} JSON Data
+        {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        JSON Data
       </button>
       {isExpanded && (
-        <pre className="mt-2 p-4 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg text-xs overflow-x-auto">
+        <pre className="mt-2 p-4 bg-black/50 border border-white/10 rounded-lg text-xs overflow-x-auto font-mono">
           <code className="text-white">{json}</code>
         </pre>
       )}
@@ -714,14 +788,14 @@ function TextContent({ content, sendMessage }) {
   const parts = content.split(suggestionRegex);
   
   return (
-    <div className="text-sm text-white space-y-2">
+    <div className="text-sm text-white space-y-3 leading-relaxed">
       {parts.map((part, idx) => {
         if (/^[1-3]️⃣/.test(part)) {
           return (
             <button
               key={idx}
               onClick={() => sendMessage(part.replace(/^[1-3]️⃣\s*/, ''))}
-              className="block w-full text-left px-3 py-2 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg text-xs hover:bg-[#1a1a1a] hover:border-white/20 transition-colors"
+              className="block w-full text-left px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm hover:bg-white/10 hover:border-white/20 transition-all"
             >
               {part}
             </button>
@@ -733,7 +807,7 @@ function TextContent({ content, sendMessage }) {
   );
 }
 
-// Schema View Component (continued in next part due to length)
+// Schema View Component (continued in next message due to size)
 function SchemaView({ schema, schemaInput, setSchemaInput, analyzeSchema, loadDemoMode }) {
   const handleLoadSchema = () => {
     if (schemaInput.trim()) {
@@ -743,11 +817,11 @@ function SchemaView({ schema, schemaInput, setSchemaInput, analyzeSchema, loadDe
   
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="px-8 py-6 border-b border-[#2a2a2a]">
+      <div className="px-8 py-6 border-b border-white/10 backdrop-blur-sm bg-black/50">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold mb-1">SQL Schema</h1>
-            <p className="text-sm text-[#a3a3a3]">Paste CREATE TABLE statements</p>
+            <p className="text-sm text-gray-400">Paste CREATE TABLE statements</p>
           </div>
           <div>
             {schema.tables.length > 0 ? (
@@ -755,7 +829,7 @@ function SchemaView({ schema, schemaInput, setSchemaInput, analyzeSchema, loadDe
                 Loaded
               </span>
             ) : (
-              <span className="px-3 py-1.5 bg-[#1a1a1a] text-[#666666] border border-[#2a2a2a] rounded-full text-xs font-medium">
+              <span className="px-3 py-1.5 bg-white/5 text-gray-500 border border-white/10 rounded-full text-xs font-medium">
                 Not loaded
               </span>
             )}
@@ -766,40 +840,41 @@ function SchemaView({ schema, schemaInput, setSchemaInput, analyzeSchema, loadDe
       <div className="flex-1 overflow-y-auto px-8 py-6">
         <div className="max-w-5xl mx-auto space-y-6">
           {schema.tables.length === 0 ? (
-            <>
+            <div className="fade-in">
               <div>
-                <div>
+                <div className="flex items-center justify-between mb-3">
                   <label className="text-sm font-medium">Schema SQL</label>
-                  <span className={`text-xs ${schemaInput.length > 10000 ? 'text-[#a3a3a3]' : 'text-[#666666]'}`}>
-                    {schemaInput.length} characters {schemaInput.length > 10000 && '(⚠️ Large schema)'}
+                  <span className={`text-xs ${schemaInput.length > 10000 ? 'text-yellow-500' : 'text-gray-500'}`}>
+                    {schemaInput.length} characters
                   </span>
                 </div>
                 <textarea
                   value={schemaInput}
                   onChange={(e) => setSchemaInput(e.target.value)}
-                  placeholder={`CREATE TABLE users (\n  id SERIAL PRIMARY KEY,\n  email TEXT,\n  created_at TIMESTAMP\n);`}
-                  className="w-full h-96 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg px-4 py-3 text-sm font-mono text-white placeholder-[#666666] outline-none focus:border-white/40 transition-colors"
+                  placeholder="CREATE TABLE users (&#10;  id SERIAL PRIMARY KEY,&#10;  email TEXT,&#10;  created_at TIMESTAMP&#10;);"
+                  className="w-full h-96 bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-sm font-mono text-white placeholder-gray-600 outline-none focus:border-white/30 transition-all"
                 />
               </div>
               
-              <div className="flex gap-3">
+              <div className="flex gap-3 mt-4">
                 <button
                   onClick={handleLoadSchema}
                   disabled={!schemaInput.trim()}
-                  className="px-6 py-3 bg-white text-black rounded-lg font-medium hover:bg-[#e5e5e5] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  className="btn-hover px-6 py-3 bg-white text-black rounded-lg font-medium disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-2"
                 >
+                  <Database size={18} />
                   Load Schema
                 </button>
                 <button
                   onClick={loadDemoMode}
-                  className="px-6 py-3 bg-[#1a1a1a] text-white border border-[#2a2a2a] rounded-lg font-medium hover:bg-[#252525] transition-colors"
+                  className="btn-hover px-6 py-3 bg-white/5 text-white border border-white/10 rounded-lg font-medium hover:bg-white/10"
                 >
                   Load Sample Schema
                 </button>
               </div>
-            </>
+            </div>
           ) : (
-            <>
+            <div className="space-y-6 fade-in">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold">Loaded Schema</h2>
                 <button
@@ -807,36 +882,40 @@ function SchemaView({ schema, schemaInput, setSchemaInput, analyzeSchema, loadDe
                     setSchemaInput('');
                     analyzeSchema('');
                   }}
-                  className="px-4 py-2 bg-[#1a1a1a] text-white border border-[#2a2a2a] rounded-lg text-sm font-medium hover:bg-[#252525] transition-colors"
+                  className="btn-hover px-4 py-2 bg-white/5 text-white border border-white/10 rounded-lg text-sm font-medium hover:bg-white/10"
                 >
                   Change Schema
                 </button>
               </div>
               
-              <details className="bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg">
-                <summary className="px-4 py-3 cursor-pointer font-medium text-sm hover:bg-[#1a1a1a] transition-colors">
+              <details className="bg-white/5 border border-white/10 rounded-lg overflow-hidden">
+                <summary className="px-4 py-3 cursor-pointer font-medium text-sm hover:bg-white/10 transition-all flex items-center gap-2">
+                  <ChevronRight size={16} className="transition-transform" />
                   Raw Schema SQL
                 </summary>
-                <pre className="px-4 py-3 border-t border-[#2a2a2a] text-xs font-mono text-[#a3a3a3] overflow-x-auto">
+                <pre className="px-4 py-3 border-t border-white/10 text-xs font-mono text-gray-400 overflow-x-auto">
                   {schema.raw}
                 </pre>
               </details>
               
               <div>
-                <h3 className="text-base font-semibold mb-3">Tables</h3>
+                <h3 className="text-base font-semibold mb-4">Tables</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {schema.tables.map(table => (
-                    <div key={table.name} className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg p-4">
-                      <h4 className="font-semibold mb-3">{table.name}</h4>
+                  {schema.tables.map((table, idx) => (
+                    <div key={table.name} className="card-hover bg-white/5 border border-white/10 rounded-lg p-5 fade-in" style={{ animationDelay: `${idx * 50}ms` }}>
+                      <h4 className="font-semibold mb-4 flex items-center gap-2">
+                        <Database size={16} />
+                        {table.name}
+                      </h4>
                       <div className="space-y-2">
                         {table.columns.map(col => (
-                          <div key={col.name} className="flex items-center justify-between text-xs">
-                            <span className="text-white">
+                          <div key={col.name} className="flex items-center justify-between text-xs py-1.5">
+                            <span className="text-white flex items-center gap-2">
                               {col.name}
-                              {col.isPrimary && <span className="ml-2 px-1.5 py-0.5 bg-white/10 text-white rounded text-[10px]">PK</span>}
-                              {col.isForeign && <span className="ml-2 px-1.5 py-0.5 bg-white/10 text-white rounded text-[10px]">FK</span>}
+                              {col.isPrimary && <span className="px-1.5 py-0.5 bg-white/10 text-white rounded text-[10px] font-medium">PK</span>}
+                              {col.isForeign && <span className="px-1.5 py-0.5 bg-white/10 text-white rounded text-[10px] font-medium">FK</span>}
                             </span>
-                            <span className="text-[#a3a3a3] font-mono">{col.type}</span>
+                            <span className="text-gray-400 font-mono text-[11px]">{col.type}</span>
                           </div>
                         ))}
                       </div>
@@ -847,17 +926,21 @@ function SchemaView({ schema, schemaInput, setSchemaInput, analyzeSchema, loadDe
               
               {schema.relationships.length > 0 && (
                 <div>
-                  <h3 className="text-base font-semibold mb-3">Relationships</h3>
-                  <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg p-4 space-y-2">
+                  <h3 className="text-base font-semibold mb-4">Relationships</h3>
+                  <div className="bg-white/5 border border-white/10 rounded-lg p-5 space-y-2">
                     {schema.relationships.map((rel, idx) => (
-                      <div key={idx} className="text-sm text-white">
-                        <code className="text-white">{rel.from}</code>.<code>{rel.column}</code> → <code className="text-[#a3a3a3]">{rel.to}</code>
+                      <div key={idx} className="text-sm text-white flex items-center gap-2">
+                        <code className="text-white bg-white/10 px-2 py-0.5 rounded">{rel.from}</code>
+                        <span className="text-gray-400">.</span>
+                        <code className="text-gray-400">{rel.column}</code>
+                        <span className="text-gray-500">→</span>
+                        <code className="text-white bg-white/10 px-2 py-0.5 rounded">{rel.to}</code>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
-            </>
+            </div>
           )}
         </div>
       </div>
@@ -882,17 +965,18 @@ function MetricsView({ trackedMetrics, setTrackedMetrics, selectedMetric, setSel
   return (
     <div className="flex-1 flex overflow-hidden">
       <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="px-8 py-6 border-b border-[#2a2a2a]">
+        <div className="px-8 py-6 border-b border-white/10 backdrop-blur-sm bg-black/50">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-semibold mb-1">Tracked Metrics</h1>
-              <p className="text-sm text-[#a3a3a3]">Metrics running on scheduled checks with anomaly detection</p>
+              <p className="text-sm text-gray-400">Real-time monitoring with anomaly detection</p>
             </div>
             <button
               onClick={handleAddMetric}
-              className="px-4 py-2 bg-white text-black rounded-lg text-sm font-medium hover:bg-[#e5e5e5] transition-colors"
+              className="btn-hover px-4 py-2 bg-white text-black rounded-lg text-sm font-medium flex items-center gap-2"
             >
-              + Add Metric
+              <Activity size={16} />
+              Add Metric
             </button>
           </div>
         </div>
@@ -900,26 +984,29 @@ function MetricsView({ trackedMetrics, setTrackedMetrics, selectedMetric, setSel
         <div className="flex-1 overflow-y-auto px-8 py-6">
           {trackedMetrics.length === 0 ? (
             <div className="flex items-center justify-center h-full">
-              <div className="text-center max-w-md">
-                <div className="text-6xl mb-4">📊</div>
-                <h3 className="text-lg font-semibold mb-2">No tracked metrics yet</h3>
-                <p className="text-[#a3a3a3] mb-4">Start tracking metrics to monitor your product's health automatically.</p>
+              <div className="text-center max-w-md fade-in">
+                <div className="w-16 h-16 bg-white/10 backdrop-blur-sm rounded-2xl mx-auto mb-6 flex items-center justify-center border border-white/20">
+                  <Activity className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-lg font-semibold mb-3">No tracked metrics yet</h3>
+                <p className="text-gray-400 mb-6">Start tracking metrics to monitor your product's health automatically.</p>
                 <button
                   onClick={handleAddMetric}
-                  className="px-6 py-3 bg-white text-black rounded-lg font-medium hover:bg-[#e5e5e5] transition-colors"
+                  className="btn-hover px-6 py-3 bg-white text-black rounded-lg font-medium"
                 >
                   Add Your First Metric
                 </button>
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-4 max-w-5xl mx-auto">
-              {trackedMetrics.map(metric => (
+            <div className="grid grid-cols-1 gap-4 max-w-6xl mx-auto">
+              {trackedMetrics.map((metric, idx) => (
                 <MetricCard
                   key={metric.id}
                   metric={metric}
                   onSelect={() => setSelectedMetric(metric)}
                   onDelete={() => handleDeleteMetric(metric.id)}
+                  index={idx}
                 />
               ))}
             </div>
@@ -937,23 +1024,32 @@ function MetricsView({ trackedMetrics, setTrackedMetrics, selectedMetric, setSel
   );
 }
 
-// Metric Card Component
-function MetricCard({ metric, onSelect, onDelete }) {
+// Premium Metric Card Component
+function MetricCard({ metric, onSelect, onDelete, index }) {
   const statusColors = {
-    ok: 'bg-white',
-    warning: 'bg-[#a3a3a3]',
-    critical: 'bg-[#666666]'
+    ok: 'text-green-500',
+    warning: 'text-yellow-500',
+    critical: 'text-red-500'
   };
   
+  const TrendIcon = metric.trend === 'up' ? TrendingUp : TrendingDown;
+  
   return (
-    <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg p-5 hover:border-white/40 transition-colors cursor-pointer" onClick={onSelect}>
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <span className={`w-2 h-2 rounded-full ${statusColors[metric.status]}`}></span>
-          <h3 className="font-semibold">{metric.name}</h3>
+    <div 
+      className="card-hover glass border border-white/10 rounded-xl p-6 cursor-pointer fade-in"
+      onClick={onSelect}
+      style={{ animationDelay: `${index * 50}ms` }}
+    >
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <span className={`text-2xl ${statusColors[metric.status]}`}>●</span>
+          <div>
+            <h3 className="font-semibold text-lg">{metric.name}</h3>
+            <p className="text-sm text-gray-400 mt-0.5">{metric.description}</p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className="px-2 py-1 bg-[#0a0a0a] border border-[#2a2a2a] rounded text-xs text-[#a3a3a3]">
+          <span className="px-2 py-1 bg-white/5 border border-white/10 rounded text-xs text-gray-400">
             {metric.interval}
           </span>
           <button
@@ -961,33 +1057,36 @@ function MetricCard({ metric, onSelect, onDelete }) {
               e.stopPropagation();
               onDelete();
             }}
-            className="px-2 py-1 text-xs text-[#a3a3a3] hover:bg-[#0a0a0a] hover:text-white rounded transition-colors"
+            className="px-2 py-1 text-xs text-gray-400 hover:text-white hover:bg-white/10 rounded transition-all"
           >
             Delete
           </button>
         </div>
       </div>
       
-      <p className="text-sm text-[#a3a3a3] mb-4">{metric.description}</p>
-      
-      <div className="flex items-end justify-between mb-3">
+      <div className="flex items-end justify-between mb-4">
         <div>
-          <div className="text-2xl font-bold">
+          <div className="text-3xl font-bold mb-1">
             {typeof metric.currentValue === 'number' 
               ? metric.currentValue.toLocaleString() 
               : metric.currentValue}
           </div>
-          <div className="text-xs text-[#666666] mt-1">
-            Last checked {formatTimestamp(metric.lastChecked)}
+          <div className="flex items-center gap-2 text-sm">
+            <TrendIcon size={14} className={metric.trend === 'up' ? 'text-green-500' : 'text-red-500'} />
+            <span className={metric.trend === 'up' ? 'text-green-500' : 'text-red-500'}>
+              {metric.change}
+            </span>
+            <span className="text-gray-500">vs last period</span>
           </div>
-        </div>
-        <div className={`text-lg ${metric.trend === 'up' ? 'text-white' : 'text-[#666666]'}`}>
-          {metric.trend === 'up' ? '↗' : '↘'}
         </div>
       </div>
       
-      <div className="h-16">
-        <SimpleLineChart data={metric.history} />
+      <div className="h-16 relative">
+        <PremiumLineChart data={metric.history} />
+      </div>
+      
+      <div className="text-xs text-gray-500 mt-3">
+        Last checked {formatTimestamp(metric.lastChecked)}
       </div>
     </div>
   );
@@ -996,52 +1095,52 @@ function MetricCard({ metric, onSelect, onDelete }) {
 // Metric Detail Panel Component
 function MetricDetailPanel({ metric, onClose }) {
   return (
-    <div className="w-96 bg-[#0a0a0a] border-l border-[#2a2a2a] overflow-y-auto">
-      <div className="p-6 border-b border-[#2a2a2a] flex items-center justify-between">
+    <div className="w-96 h-full glass border-l border-white/10 overflow-y-auto slide-in">
+      <div className="p-6 border-b border-white/10 flex items-center justify-between sticky top-0 glass">
         <h2 className="text-lg font-semibold">Metric Details</h2>
         <button
           onClick={onClose}
-          className="text-[#a3a3a3] hover:text-white transition-colors"
+          className="text-gray-400 hover:text-white transition-colors"
         >
-          ✕
+          <X size={20} />
         </button>
       </div>
       
       <div className="p-6 space-y-6">
         <div>
-          <h3 className="font-semibold mb-2">{metric.name}</h3>
-          <p className="text-sm text-[#a3a3a3]">{metric.description}</p>
+          <h3 className="font-semibold mb-2 text-lg">{metric.name}</h3>
+          <p className="text-sm text-gray-400">{metric.description}</p>
         </div>
         
         <div>
-          <h4 className="text-sm font-medium mb-2 text-[#a3a3a3]">SQL Query</h4>
-          <pre className="bg-black border border-[#2a2a2a] rounded-lg p-3 text-xs overflow-x-auto">
-            <code>{metric.query}</code>
+          <h4 className="text-sm font-medium mb-3 text-gray-400 uppercase tracking-wider">SQL Query</h4>
+          <pre className="bg-black/50 border border-white/10 rounded-lg p-4 text-xs overflow-x-auto font-mono">
+            <code className="text-white">{metric.query}</code>
           </pre>
         </div>
         
         <div>
-          <h4 className="text-sm font-medium mb-2 text-[#a3a3a3]">Current Value</h4>
-          <div className="text-3xl font-bold">{metric.currentValue.toLocaleString()}</div>
+          <h4 className="text-sm font-medium mb-3 text-gray-400 uppercase tracking-wider">Current Value</h4>
+          <div className="text-4xl font-bold">{metric.currentValue.toLocaleString()}</div>
         </div>
         
         <div>
-          <h4 className="text-sm font-medium mb-3 text-[#a3a3a3]">7-Day History</h4>
-          <div className="h-48 bg-black border border-[#2a2a2a] rounded-lg p-3">
-            <SimpleLineChart data={metric.history} />
+          <h4 className="text-sm font-medium mb-3 text-gray-400 uppercase tracking-wider">7-Day History</h4>
+          <div className="h-48 bg-black/50 border border-white/10 rounded-lg p-4">
+            <PremiumLineChart data={metric.history} />
           </div>
         </div>
         
         <div>
-          <h4 className="text-sm font-medium mb-2 text-[#a3a3a3]">Anomaly Rules</h4>
+          <h4 className="text-sm font-medium mb-3 text-gray-400 uppercase tracking-wider">Anomaly Rules</h4>
           <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm p-2 bg-black border border-[#2a2a2a] rounded">
+            <div className="flex items-center justify-between text-sm p-3 bg-white/5 border border-white/10 rounded-lg">
               <span>Critical</span>
-              <span className="text-[#a3a3a3]">&gt; 20% deviation</span>
+              <span className="text-red-500">&gt; 20% deviation</span>
             </div>
-            <div className="flex items-center justify-between text-sm p-2 bg-black border border-[#2a2a2a] rounded">
+            <div className="flex items-center justify-between text-sm p-3 bg-white/5 border border-white/10 rounded-lg">
               <span>Warning</span>
-              <span className="text-[#a3a3a3]">10-20% deviation</span>
+              <span className="text-yellow-500">10-20% deviation</span>
             </div>
           </div>
         </div>
@@ -1050,7 +1149,7 @@ function MetricDetailPanel({ metric, onClose }) {
   );
 }
 
-// Alerts View Component - Keeping it minimal, update only if visible
+// Alerts View Component (Simplified for space)
 function AlertsView({ notifications, setNotifications, alerts }) {
   const updateNotification = (channel, field, value) => {
     setNotifications(prev => ({
@@ -1061,22 +1160,22 @@ function AlertsView({ notifications, setNotifications, alerts }) {
   
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="px-8 py-6 border-b border-[#2a2a2a]">
-        <h1 className="text-2xl font-semibold mb-1">Notifications</h1>
-        <p className="text-sm text-[#a3a3a3]">Configure where anomaly alerts are sent</p>
+      <div className="px-8 py-6 border-b border-white/10 backdrop-blur-sm bg-black/50">
+        <h1 className="text-2xl font-semibold mb-1">Alerts & Notifications</h1>
+        <p className="text-sm text-gray-400">Configure where anomaly alerts are sent</p>
       </div>
       
       <div className="flex-1 overflow-y-auto px-8 py-6">
-        <div className="max-w-4xl mx-auto space-y-8">
-          <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg p-6">
+        <div className="max-w-4xl mx-auto space-y-6 fade-in">
+          <div className="glass border border-white/10 rounded-xl p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center text-xl">
-                  📢
+                <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
+                  <Bell className="w-5 h-5 text-black" />
                 </div>
                 <div>
                   <h3 className="font-semibold">Slack</h3>
-                  <p className="text-xs text-[#a3a3a3]">Send alerts to Slack channel</p>
+                  <p className="text-xs text-gray-400">Send alerts to Slack channel</p>
                 </div>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
@@ -1086,182 +1185,41 @@ function AlertsView({ notifications, setNotifications, alerts }) {
                   onChange={(e) => updateNotification('slack', 'active', e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className="w-11 h-6 bg-[#0a0a0a] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-white"></div>
+                <div className="w-11 h-6 bg-white/10 rounded-full peer peer-checked:bg-white transition-all"></div>
+                <div className="absolute left-1 top-1 bg-white w-4 h-4 rounded-full peer-checked:translate-x-5 transition-transform"></div>
               </label>
             </div>
             
             <div className="space-y-3">
               <div>
-                <label className="text-sm text-[#a3a3a3] mb-1 block">Webhook URL</label>
+                <label className="text-sm text-gray-400 mb-2 block">Webhook URL</label>
                 <input
                   type="text"
                   value={notifications.slack.webhookUrl}
                   onChange={(e) => updateNotification('slack', 'webhookUrl', e.target.value)}
                   placeholder="https://hooks.slack.com/services/..."
-                  className="w-full bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm outline-none focus:border-white/40 transition-colors"
+                  className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-white/30 transition-all"
                 />
-              </div>
-              <div>
-                <label className="text-sm text-[#a3a3a3] mb-1 block">Default Channel</label>
-                <input
-                  type="text"
-                  value={notifications.slack.channel}
-                  onChange={(e) => updateNotification('slack', 'channel', e.target.value)}
-                  placeholder="#product-alerts"
-                  className="w-full bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm outline-none focus:border-white/40 transition-colors"
-                />
-              </div>
-              <button className="px-4 py-2 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg text-sm hover:bg-[#1a1a1a] transition-colors">
-                Test Connection
-              </button>
-            </div>
-          </div>
-          
-          <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center text-xl">
-                  ✉️
-                </div>
-                <div>
-                  <h3 className="font-semibold">Email</h3>
-                  <p className="text-xs text-[#a3a3a3]">Send alerts via email</p>
-                </div>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={notifications.email.active}
-                  onChange={(e) => updateNotification('email', 'active', e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-[#0a0a0a] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-white"></div>
-              </label>
-            </div>
-            
-            <div className="space-y-3">
-              <div>
-                <label className="text-sm text-[#a3a3a3] mb-1 block">Email Addresses</label>
-                <input
-                  type="text"
-                  value={notifications.email.addresses}
-                  onChange={(e) => updateNotification('email', 'addresses', e.target.value)}
-                  placeholder="alerts@company.com, pm@company.com"
-                  className="w-full bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm outline-none focus:border-white/40 transition-colors"
-                />
-              </div>
-              <div>
-                <label className="text-sm text-[#a3a3a3] mb-1 block">Severity Filter</label>
-                <select
-                  value={notifications.email.filter}
-                  onChange={(e) => updateNotification('email', 'filter', e.target.value)}
-                  className="w-full bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm outline-none focus:border-white/40 transition-colors"
-                >
-                  <option value="all">All alerts</option>
-                  <option value="critical">Critical only</option>
-                  <option value="warning">Warning and above</option>
-                </select>
-              </div>
-              <button className="px-4 py-2 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg text-sm hover:bg-[#1a1a1a] transition-colors">
-                Send Test Email
-              </button>
-            </div>
-          </div>
-          
-          <div>
-            <h3 className="text-lg font-semibold mb-4">Alert Rules</h3>
-            <div className="space-y-3">
-              <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-medium flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-white"></span>
-                      Critical
-                    </div>
-                    <p className="text-sm text-[#a3a3a3] mt-1">Deviation &gt; 20%</p>
-                  </div>
-                  <input
-                    type="number"
-                    defaultValue={20}
-                    className="w-20 bg-[#0a0a0a] border border-[#2a2a2a] rounded px-2 py-1 text-sm text-center"
-                  />
-                </div>
-              </div>
-              
-              <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-medium flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-[#a3a3a3]"></span>
-                      Warning
-                    </div>
-                    <p className="text-sm text-[#a3a3a3] mt-1">Deviation 10-20%</p>
-                  </div>
-                  <input
-                    type="number"
-                    defaultValue={10}
-                    className="w-20 bg-[#0a0a0a] border border-[#2a2a2a] rounded px-2 py-1 text-sm text-center"
-                  />
-                </div>
-              </div>
-              
-              <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-medium flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-[#666666]"></span>
-                      Info
-                    </div>
-                    <p className="text-sm text-[#a3a3a3] mt-1">Any change detected</p>
-                  </div>
-                  <span className="text-sm text-[#a3a3a3]">Always on</span>
-                </div>
               </div>
             </div>
           </div>
           
-          <div>
+          <div className="glass border border-white/10 rounded-xl p-6">
             <h3 className="text-lg font-semibold mb-4">Alert History</h3>
-            <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-[#0a0a0a] border-b border-[#2a2a2a]">
-                  <tr>
-                    <th className="text-left px-4 py-3 font-medium text-[#a3a3a3]">Timestamp</th>
-                    <th className="text-left px-4 py-3 font-medium text-[#a3a3a3]">Metric</th>
-                    <th className="text-left px-4 py-3 font-medium text-[#a3a3a3]">Severity</th>
-                    <th className="text-left px-4 py-3 font-medium text-[#a3a3a3]">Channel</th>
-                    <th className="text-left px-4 py-3 font-medium text-[#a3a3a3]">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {alerts.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="px-4 py-8 text-center text-[#666666]">
-                        No alerts yet
-                      </td>
-                    </tr>
-                  ) : (
-                    alerts.map((alert, idx) => (
-                      <tr key={idx} className="border-b border-[#2a2a2a] last:border-0">
-                        <td className="px-4 py-3">{formatTimestamp(alert.timestamp)}</td>
-                        <td className="px-4 py-3">{alert.metric}</td>
-                        <td className="px-4 py-3">
-                          <span className={`px-2 py-1 rounded text-xs ${
-                            alert.severity === 'critical' ? 'bg-white/10 text-white' :
-                            alert.severity === 'warning' ? 'bg-[#a3a3a3]/10 text-[#a3a3a3]' :
-                            'bg-[#666666]/10 text-[#666666]'
-                          }`}>
-                            {alert.severity}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">{alert.channel}</td>
-                        <td className="px-4 py-3">{alert.status}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+            {alerts.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-gray-500">No alerts yet</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {alerts.map((alert, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                    <span>{alert.metric}</span>
+                    <span className="text-xs text-gray-400">{formatTimestamp(alert.timestamp)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -1272,31 +1230,32 @@ function AlertsView({ notifications, setNotifications, alerts }) {
 // Mobile Tab Bar Component
 function MobileTabBar({ activeView, setActiveView }) {
   const tabs = [
-    { id: 'chat', icon: '💬', label: 'Chat' },
-    { id: 'metrics', icon: '📊', label: 'Metrics' },
-    { id: 'alerts', icon: '🔔', label: 'Alerts' },
-    { id: 'schema', icon: '🗄️', label: 'Schema' },
+    { id: 'chat', icon: MessageSquare },
+    { id: 'metrics', icon: Activity },
+    { id: 'alerts', icon: Bell },
+    { id: 'schema', icon: Database },
   ];
   
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-[#0a0a0a] border-t border-[#2a2a2a] px-2 py-1 flex justify-around z-50">
-      {tabs.map(tab => (
-        <button
-          key={tab.id}
-          onClick={() => setActiveView(tab.id)}
-          className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
-            activeView === tab.id
-              ? 'bg-white text-black'
-              : 'text-[#a3a3a3]'
-          }`}
-        >
-          <span className="text-lg">{tab.icon}</span>
-          <span className="text-xs">{tab.label}</span>
-        </button>
-      ))}
+    <div className="fixed bottom-0 left-0 right-0 glass border-t border-white/10 px-2 py-2 flex justify-around z-50">
+      {tabs.map(tab => {
+        const Icon = tab.icon;
+        return (
+          <button
+            key={tab.id}
+            onClick={() => setActiveView(tab.id)}
+            className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-all ${
+              activeView === tab.id
+                ? 'bg-white text-black'
+                : 'text-gray-400'
+            }`}
+          >
+            <Icon size={20} />
+          </button>
+        );
+      })}
     </div>
   );
 }
-
 
 export default App;

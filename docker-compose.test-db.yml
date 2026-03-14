@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Test Database for PulseTrack
+  postgres:
+    image: postgres:15
+    container_name: pulsetrack-test-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: testpass123
+      POSTGRES_DB: pulsetrack_test
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./schema_postgres.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+
+# Usage:
+# 1. Start database:
+#    docker-compose up -d
+#
+# 2. Check logs:
+#    docker-compose logs -f postgres
+#
+# 3. Connect to database:
+#    docker-compose exec postgres psql -U postgres pulsetrack_test
+#
+# 4. Stop database:
+#    docker-compose down
+#
+# 5. Reset database (delete all data):
+#    docker-compose down -v
+#
+# Connection details for PulseTrack:
+# - Host: localhost (or host.docker.internal from inside containers)
+# - Port: 5432
+# - Database: pulsetrack_test
+# - Username: postgres
+# - Password: testpass123

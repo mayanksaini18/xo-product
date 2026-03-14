@@ -80,7 +80,7 @@ If you have a PostgreSQL or MySQL database:
 
 ### 2.1 Open PulseTrack
 
-Visit: **https://ai-analytics-hub-18.preview.emergentagent.com**
+Visit: **https://db-monitor-hub-1.preview.emergentagent.com**
 
 You should see:
 - Black premium UI
@@ -653,7 +653,7 @@ sudo supervisorctl restart backend
 **Check Status:**
 ```bash
 # Backend
-curl https://ai-analytics-hub-18.preview.emergentagent.com/api/
+curl https://db-monitor-hub-1.preview.emergentagent.com/api/
 
 # Database
 docker exec pulsetrack-test-db pg_isready -U postgres

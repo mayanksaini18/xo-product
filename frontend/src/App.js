@@ -26,9 +26,13 @@ import {
   AlertCircle
 } from 'lucide-react';
 import "@/App.css";
+import { mockDbConnections, mockMonitors, mockAlerts, generateDetailedMonitorResults } from './mockData';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
+
+// Enable mock mode for demo/testing
+const USE_MOCK_DATA = true;
 
 // Utility Functions
 const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -142,31 +146,61 @@ function App() {
   
   const loadDbConnections = async () => {
     try {
+      if (USE_MOCK_DATA) {
+        // Load mock data for demo
+        setDbConnections(mockDbConnections);
+        return;
+      }
+      
       const res = await fetch(`${API}/db-connections`);
       const data = await res.json();
       setDbConnections(data);
     } catch (error) {
       console.error('Failed to load connections:', error);
+      // Fallback to mock data if API fails
+      if (USE_MOCK_DATA) {
+        setDbConnections(mockDbConnections);
+      }
     }
   };
   
   const loadMonitors = async () => {
     try {
+      if (USE_MOCK_DATA) {
+        // Load mock data for demo
+        setMonitors(mockMonitors);
+        return;
+      }
+      
       const res = await fetch(`${API}/monitors`);
       const data = await res.json();
       setMonitors(data);
     } catch (error) {
       console.error('Failed to load monitors:', error);
+      // Fallback to mock data if API fails
+      if (USE_MOCK_DATA) {
+        setMonitors(mockMonitors);
+      }
     }
   };
   
   const loadAlerts = async () => {
     try {
+      if (USE_MOCK_DATA) {
+        // Load mock data for demo
+        setAlerts(mockAlerts);
+        return;
+      }
+      
       const res = await fetch(`${API}/alerts`);
       const data = await res.json();
       setAlerts(data);
     } catch (error) {
       console.error('Failed to load alerts:', error);
+      // Fallback to mock data if API fails
+      if (USE_MOCK_DATA) {
+        setAlerts(mockAlerts);
+      }
     }
   };
   
@@ -852,12 +886,37 @@ function MonitorsView({ monitors, loadMonitors, showToast }) {
   
   const loadMonitorDetails = async (id) => {
     try {
+      if (USE_MOCK_DATA) {
+        // Load mock monitor with detailed results
+        const monitor = mockMonitors.find(m => m.id === id);
+        if (monitor) {
+          const detailedMonitor = {
+            ...monitor,
+            results: generateDetailedMonitorResults(id, 50)
+          };
+          setMonitorDetails(detailedMonitor);
+          setSelectedMonitor(id);
+        }
+        return;
+      }
+      
       const res = await fetch(`${API}/monitors/${id}`);
       const data = await res.json();
       setMonitorDetails(data);
       setSelectedMonitor(id);
     } catch (error) {
       console.error('Failed to load monitor details:', error);
+      // Fallback to mock data
+      if (USE_MOCK_DATA) {
+        const monitor = mockMonitors.find(m => m.id === id);
+        if (monitor) {
+          setMonitorDetails({
+            ...monitor,
+            results: generateDetailedMonitorResults(id, 50)
+          });
+          setSelectedMonitor(id);
+        }
+      }
     }
   };
   

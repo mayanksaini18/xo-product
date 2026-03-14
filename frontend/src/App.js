@@ -77,7 +77,7 @@ function SimpleLineChart({ data }) {
     const range = max - min || 1;
     
     // Draw line
-    ctx.strokeStyle = '#6366f1';
+    ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 2;
     ctx.beginPath();
     
@@ -129,7 +129,7 @@ function App() {
   const showToast = (message) => {
     const toast = document.createElement('div');
     toast.textContent = message;
-    toast.style.cssText = 'position:fixed;top:20px;right:20px;background:#21253a;color:#e5e7eb;padding:12px 20px;border-radius:8px;border:1px solid #2d3148;z-index:9999;animation:fadeIn 0.3s;';
+    toast.style.cssText = 'position:fixed;top:20px;right:20px;background:#1a1a1a;color:white;padding:12px 20px;border-radius:8px;border:1px solid #2a2a2a;z-index:9999;animation:fadeIn 0.3s;';
     document.body.appendChild(toast);
     setTimeout(() => {
       toast.style.opacity = '0';
@@ -338,7 +338,7 @@ function App() {
   };
   
   return (
-    <div className="flex h-screen bg-[#0f1117] text-[#e5e7eb] overflow-hidden">
+    <div className="flex h-screen bg-black text-white overflow-hidden">
       {/* Sidebar */}
       {!isMobile && (
         <Sidebar 
@@ -412,11 +412,11 @@ function Sidebar({ activeView, setActiveView, schema }) {
   ];
   
   return (
-    <div className="w-60 bg-[#1a1d27] border-r border-[#2d3148] flex flex-col">
+    <div className="w-60 bg-[#0a0a0a] border-r border-[#2a2a2a] flex flex-col">
       {/* Logo */}
-      <div className="p-6 border-b border-[#2d3148]">
+      <div className="p-6 border-b border-[#2a2a2a]">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-gradient-to-br from-[#6366f1] to-[#8b5cf6] rounded-lg flex items-center justify-center text-lg">
+          <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-lg">
             📈
           </div>
           <span className="text-lg font-semibold">PulseTrack</span>
@@ -431,8 +431,8 @@ function Sidebar({ activeView, setActiveView, schema }) {
             onClick={() => setActiveView(item.id)}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
               activeView === item.id
-                ? 'bg-[#6366f1] text-white'
-                : 'text-[#9ca3af] hover:bg-[#21253a] hover:text-[#e5e7eb]'
+                ? 'bg-white text-black'
+                : 'text-[#a3a3a3] hover:bg-[#1a1a1a] hover:text-white'
             }`}
           >
             <span className="text-base">{item.icon}</span>
@@ -442,19 +442,19 @@ function Sidebar({ activeView, setActiveView, schema }) {
       </nav>
       
       {/* Bottom Section */}
-      <div className="p-4 border-t border-[#2d3148] space-y-3">
+      <div className="p-4 border-t border-[#2a2a2a] space-y-3">
         <div className="flex items-center gap-2 text-xs">
-          <span className="w-2 h-2 rounded-full bg-[#10b981]"></span>
-          <span className="text-[#9ca3af]">Connected to Claude</span>
+          <span className="w-2 h-2 rounded-full bg-white"></span>
+          <span className="text-[#a3a3a3]">Connected to Claude</span>
         </div>
         
-        <div className="px-3 py-2 bg-[#21253a] border border-[#2d3148] rounded-lg">
-          <div className="text-xs font-medium text-[#9ca3af]">Schema Status</div>
+        <div className="px-3 py-2 bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg">
+          <div className="text-xs font-medium text-[#a3a3a3]">Schema Status</div>
           <div className="text-sm font-semibold mt-0.5">
             {schema.tables.length > 0 ? (
-              <span className="text-[#10b981]">✓ {schema.tables.length} tables loaded</span>
+              <span className="text-white">✓ {schema.tables.length} tables loaded</span>
             ) : (
-              <span className="text-[#6b7280]">No schema loaded</span>
+              <span className="text-[#666666]">No schema loaded</span>
             )}
           </div>
         </div>
@@ -474,19 +474,19 @@ function ChatView({ messages, isStreaming, inputValue, setInputValue, sendMessag
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="px-8 py-6 border-b border-[#2d3148]">
+      <div className="px-8 py-6 border-b border-[#2a2a2a]">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold mb-1">Ask anything about your product</h1>
-            <p className="text-sm text-[#9ca3af]">Natural language → SQL → Insights</p>
+            <p className="text-sm text-[#a3a3a3]">Natural language → SQL → Insights</p>
           </div>
           <div>
             {schema.tables.length > 0 ? (
-              <span className="px-3 py-1.5 bg-[#10b981]/10 text-[#10b981] border border-[#10b981]/20 rounded-full text-xs font-medium">
+              <span className="px-3 py-1.5 bg-white/10 text-white border border-white/20 rounded-full text-xs font-medium">
                 ✓ Schema loaded — {schema.tables.length} tables
               </span>
             ) : (
-              <span className="px-3 py-1.5 bg-[#6b7280]/10 text-[#6b7280] border border-[#6b7280]/20 rounded-full text-xs font-medium">
+              <span className="px-3 py-1.5 bg-[#1a1a1a] text-[#666666] border border-[#2a2a2a] rounded-full text-xs font-medium">
                 No schema loaded
               </span>
             )}
@@ -509,28 +509,28 @@ function ChatView({ messages, isStreaming, inputValue, setInputValue, sendMessag
       </div>
       
       {/* Input Area */}
-      <div className="px-8 py-6 border-t border-[#2d3148]">
+      <div className="px-8 py-6 border-t border-[#2a2a2a]">
         <div className="max-w-4xl mx-auto">
-          <div className="relative flex items-end gap-3 bg-[#1a1d27] border border-[#2d3148] rounded-xl p-3 focus-within:border-[#6366f1] transition-colors">
+          <div className="relative flex items-end gap-3 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl p-3 focus-within:border-white/40 transition-colors">
             <textarea
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Ask about your metrics… e.g. 'Did error rate spike after the deploy?'"
-              className="flex-1 bg-transparent text-[#e5e7eb] placeholder-[#6b7280] outline-none text-sm max-h-24 min-h-[40px] resize-none"
+              className="flex-1 bg-transparent text-white placeholder-[#666666] outline-none text-sm max-h-24 min-h-[40px] resize-none"
               rows={1}
               disabled={isStreaming}
             />
             <button
               onClick={() => sendMessage(inputValue)}
               disabled={isStreaming || !inputValue.trim()}
-              className="px-4 py-2 bg-[#6366f1] text-white rounded-lg text-sm font-medium hover:bg-[#5558e3] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-4 py-2 bg-white text-black rounded-lg text-sm font-medium hover:bg-[#e5e5e5] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
               {isStreaming ? '...' : 'Send'}
             </button>
           </div>
-          <div className="text-xs text-[#6b7280] mt-2 text-center">
-            Press <kbd className="px-1.5 py-0.5 bg-[#21253a] border border-[#2d3148] rounded">⌘ + Enter</kbd> to send • <kbd className="px-1.5 py-0.5 bg-[#21253a] border border-[#2d3148] rounded">⌘ + K</kbd> to focus
+          <div className="text-xs text-[#666666] mt-2 text-center">
+            Press <kbd className="px-1.5 py-0.5 bg-[#1a1a1a] border border-[#2a2a2a] rounded">⌘ + Enter</kbd> to send • <kbd className="px-1.5 py-0.5 bg-[#1a1a1a] border border-[#2a2a2a] rounded">⌘ + K</kbd> to focus
           </div>
         </div>
       </div>
@@ -543,23 +543,23 @@ function WelcomeCard({ setActiveView, loadDemoMode }) {
   return (
     <div className="flex items-center justify-center h-full">
       <div className="text-center max-w-md">
-        <div className="w-16 h-16 bg-gradient-to-br from-[#6366f1] to-[#8b5cf6] rounded-2xl mx-auto mb-4 flex items-center justify-center text-3xl">
+        <div className="w-16 h-16 bg-white rounded-2xl mx-auto mb-4 flex items-center justify-center text-3xl">
           📊
         </div>
         <h2 className="text-2xl font-semibold mb-2">Track your feature's impact</h2>
-        <p className="text-[#9ca3af] mb-6">
+        <p className="text-[#a3a3a3] mb-6">
           Paste your SQL schema to start analyzing your product metrics with AI.
         </p>
         <div className="flex flex-col gap-3">
           <button
             onClick={() => setActiveView('schema')}
-            className="px-6 py-3 bg-[#6366f1] text-white rounded-lg font-medium hover:bg-[#5558e3] transition-colors"
+            className="px-6 py-3 bg-white text-black rounded-lg font-medium hover:bg-[#e5e5e5] transition-colors"
           >
             Load SQL Schema →
           </button>
           <button
             onClick={loadDemoMode}
-            className="px-6 py-3 bg-[#21253a] text-[#e5e7eb] border border-[#2d3148] rounded-lg font-medium hover:bg-[#2a2f42] transition-colors"
+            className="px-6 py-3 bg-[#1a1a1a] text-white border border-[#2a2a2a] rounded-lg font-medium hover:bg-[#252525] transition-colors"
           >
             Try with sample schema
           </button>
@@ -574,9 +574,9 @@ function Message({ message, sendMessage }) {
   if (message.role === 'user') {
     return (
       <div className="flex justify-end">
-        <div className="max-w-[80%] bg-[#6366f1] text-white px-4 py-3 rounded-2xl rounded-tr-sm">
+        <div className="max-w-[80%] bg-white text-black px-4 py-3 rounded-2xl rounded-tr-sm">
           <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-          <div className="text-xs opacity-70 mt-1">{formatTimestamp(message.timestamp)}</div>
+          <div className="text-xs opacity-60 mt-1">{formatTimestamp(message.timestamp)}</div>
         </div>
       </div>
     );
@@ -584,10 +584,10 @@ function Message({ message, sendMessage }) {
   
   return (
     <div className="flex justify-start">
-      <div className="max-w-[85%] bg-[#21253a] border border-[#2d3148] px-5 py-4 rounded-2xl rounded-tl-sm">
+      <div className="max-w-[85%] bg-[#1a1a1a] border border-[#2a2a2a] px-5 py-4 rounded-2xl rounded-tl-sm">
         <RichMessageContent content={message.content} sendMessage={sendMessage} />
-        {message.isStreaming && <span className="inline-block w-2 h-4 bg-[#6366f1] animate-pulse ml-1">▊</span>}
-        <div className="text-xs text-[#6b7280] mt-2">{formatTimestamp(message.timestamp)}</div>
+        {message.isStreaming && <span className="inline-block w-2 h-4 bg-white animate-pulse ml-1">▊</span>}
+        <div className="text-xs text-[#666666] mt-2">{formatTimestamp(message.timestamp)}</div>
       </div>
     </div>
   );
@@ -653,18 +653,18 @@ function SQLBlock({ sql }) {
   
   return (
     <div className="relative my-3">
-      <div className="bg-[#1a1d27] border border-[#2d3148] rounded-lg overflow-hidden">
-        <div className="flex items-center justify-between px-3 py-2 bg-[#0f1117] border-b border-[#2d3148]">
-          <span className="text-xs font-medium text-[#9ca3af]">SQL</span>
+      <div className="bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg overflow-hidden">
+        <div className="flex items-center justify-between px-3 py-2 bg-black border-b border-[#2a2a2a]">
+          <span className="text-xs font-medium text-[#a3a3a3]">SQL</span>
           <button
             onClick={handleCopy}
-            className="text-xs px-2 py-1 bg-[#21253a] text-[#e5e7eb] border border-[#2d3148] rounded hover:bg-[#2a2f42] transition-colors"
+            className="text-xs px-2 py-1 bg-[#1a1a1a] text-white border border-[#2a2a2a] rounded hover:bg-[#252525] transition-colors"
           >
             {copied ? '✓ Copied' : 'Copy SQL'}
           </button>
         </div>
         <pre className="p-4 text-xs overflow-x-auto">
-          <code className="text-[#e5e7eb] font-mono">{sql}</code>
+          <code className="text-white font-mono">{sql}</code>
         </pre>
       </div>
     </div>
@@ -679,13 +679,13 @@ function JSONBlock({ json }) {
     <div className="my-3">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full text-left px-3 py-2 bg-[#1a1d27] border border-[#2d3148] rounded-lg text-xs font-medium text-[#9ca3af] hover:bg-[#21253a] transition-colors"
+        className="w-full text-left px-3 py-2 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg text-xs font-medium text-[#a3a3a3] hover:bg-[#1a1a1a] transition-colors"
       >
         {isExpanded ? '▼' : '▶'} JSON Data
       </button>
       {isExpanded && (
-        <pre className="mt-2 p-4 bg-[#1a1d27] border border-[#2d3148] rounded-lg text-xs overflow-x-auto">
-          <code className="text-[#e5e7eb]">{json}</code>
+        <pre className="mt-2 p-4 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg text-xs overflow-x-auto">
+          <code className="text-white">{json}</code>
         </pre>
       )}
     </div>
@@ -698,14 +698,14 @@ function TextContent({ content, sendMessage }) {
   const parts = content.split(suggestionRegex);
   
   return (
-    <div className="text-sm text-[#e5e7eb] space-y-2">
+    <div className="text-sm text-white space-y-2">
       {parts.map((part, idx) => {
         if (/^[1-3]️⃣/.test(part)) {
           return (
             <button
               key={idx}
               onClick={() => sendMessage(part.replace(/^[1-3]️⃣\s*/, ''))}
-              className="block w-full text-left px-3 py-2 bg-[#1a1d27] border border-[#2d3148] rounded-lg text-xs hover:bg-[#21253a] hover:border-[#6366f1] transition-colors"
+              className="block w-full text-left px-3 py-2 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg text-xs hover:bg-[#1a1a1a] hover:border-white/20 transition-colors"
             >
               {part}
             </button>
@@ -727,19 +727,19 @@ function SchemaView({ schema, schemaInput, setSchemaInput, analyzeSchema, loadDe
   
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="px-8 py-6 border-b border-[#2d3148]">
+      <div className="px-8 py-6 border-b border-[#2a2a2a]">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold mb-1">SQL Schema</h1>
-            <p className="text-sm text-[#9ca3af]">Paste CREATE TABLE statements</p>
+            <p className="text-sm text-[#a3a3a3]">Paste CREATE TABLE statements</p>
           </div>
           <div>
             {schema.tables.length > 0 ? (
-              <span className="px-3 py-1.5 bg-[#10b981]/10 text-[#10b981] border border-[#10b981]/20 rounded-full text-xs font-medium">
+              <span className="px-3 py-1.5 bg-white/10 text-white border border-white/20 rounded-full text-xs font-medium">
                 Loaded
               </span>
             ) : (
-              <span className="px-3 py-1.5 bg-[#6b7280]/10 text-[#6b7280] border border-[#6b7280]/20 rounded-full text-xs font-medium">
+              <span className="px-3 py-1.5 bg-[#1a1a1a] text-[#666666] border border-[#2a2a2a] rounded-full text-xs font-medium">
                 Not loaded
               </span>
             )}
@@ -752,9 +752,9 @@ function SchemaView({ schema, schemaInput, setSchemaInput, analyzeSchema, loadDe
           {schema.tables.length === 0 ? (
             <>
               <div>
-                <div className="flex items-center justify-between mb-3">
+                <div>
                   <label className="text-sm font-medium">Schema SQL</label>
-                  <span className={`text-xs ${schemaInput.length > 10000 ? 'text-[#f59e0b]' : 'text-[#6b7280]'}`}>
+                  <span className={`text-xs ${schemaInput.length > 10000 ? 'text-[#a3a3a3]' : 'text-[#666666]'}`}>
                     {schemaInput.length} characters {schemaInput.length > 10000 && '(⚠️ Large schema)'}
                   </span>
                 </div>
@@ -762,7 +762,7 @@ function SchemaView({ schema, schemaInput, setSchemaInput, analyzeSchema, loadDe
                   value={schemaInput}
                   onChange={(e) => setSchemaInput(e.target.value)}
                   placeholder={`CREATE TABLE users (\n  id SERIAL PRIMARY KEY,\n  email TEXT,\n  created_at TIMESTAMP\n);`}
-                  className="w-full h-96 bg-[#1a1d27] border border-[#2d3148] rounded-lg px-4 py-3 text-sm font-mono text-[#e5e7eb] placeholder-[#6b7280] outline-none focus:border-[#6366f1] transition-colors"
+                  className="w-full h-96 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg px-4 py-3 text-sm font-mono text-white placeholder-[#666666] outline-none focus:border-white/40 transition-colors"
                 />
               </div>
               
@@ -770,13 +770,13 @@ function SchemaView({ schema, schemaInput, setSchemaInput, analyzeSchema, loadDe
                 <button
                   onClick={handleLoadSchema}
                   disabled={!schemaInput.trim()}
-                  className="px-6 py-3 bg-[#6366f1] text-white rounded-lg font-medium hover:bg-[#5558e3] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="px-6 py-3 bg-white text-black rounded-lg font-medium hover:bg-[#e5e5e5] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
                   Load Schema
                 </button>
                 <button
                   onClick={loadDemoMode}
-                  className="px-6 py-3 bg-[#21253a] text-[#e5e7eb] border border-[#2d3148] rounded-lg font-medium hover:bg-[#2a2f42] transition-colors"
+                  className="px-6 py-3 bg-[#1a1a1a] text-white border border-[#2a2a2a] rounded-lg font-medium hover:bg-[#252525] transition-colors"
                 >
                   Load Sample Schema
                 </button>
@@ -791,17 +791,17 @@ function SchemaView({ schema, schemaInput, setSchemaInput, analyzeSchema, loadDe
                     setSchemaInput('');
                     analyzeSchema('');
                   }}
-                  className="px-4 py-2 bg-[#21253a] text-[#e5e7eb] border border-[#2d3148] rounded-lg text-sm font-medium hover:bg-[#2a2f42] transition-colors"
+                  className="px-4 py-2 bg-[#1a1a1a] text-white border border-[#2a2a2a] rounded-lg text-sm font-medium hover:bg-[#252525] transition-colors"
                 >
                   Change Schema
                 </button>
               </div>
               
-              <details className="bg-[#1a1d27] border border-[#2d3148] rounded-lg">
-                <summary className="px-4 py-3 cursor-pointer font-medium text-sm hover:bg-[#21253a] transition-colors">
+              <details className="bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg">
+                <summary className="px-4 py-3 cursor-pointer font-medium text-sm hover:bg-[#1a1a1a] transition-colors">
                   Raw Schema SQL
                 </summary>
-                <pre className="px-4 py-3 border-t border-[#2d3148] text-xs font-mono text-[#9ca3af] overflow-x-auto">
+                <pre className="px-4 py-3 border-t border-[#2a2a2a] text-xs font-mono text-[#a3a3a3] overflow-x-auto">
                   {schema.raw}
                 </pre>
               </details>
@@ -810,17 +810,17 @@ function SchemaView({ schema, schemaInput, setSchemaInput, analyzeSchema, loadDe
                 <h3 className="text-base font-semibold mb-3">Tables</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {schema.tables.map(table => (
-                    <div key={table.name} className="bg-[#21253a] border border-[#2d3148] rounded-lg p-4">
+                    <div key={table.name} className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg p-4">
                       <h4 className="font-semibold mb-3">{table.name}</h4>
                       <div className="space-y-2">
                         {table.columns.map(col => (
                           <div key={col.name} className="flex items-center justify-between text-xs">
-                            <span className="text-[#e5e7eb]">
+                            <span className="text-white">
                               {col.name}
-                              {col.isPrimary && <span className="ml-2 px-1.5 py-0.5 bg-[#6366f1]/20 text-[#6366f1] rounded text-[10px]">PK</span>}
-                              {col.isForeign && <span className="ml-2 px-1.5 py-0.5 bg-[#10b981]/20 text-[#10b981] rounded text-[10px]">FK</span>}
+                              {col.isPrimary && <span className="ml-2 px-1.5 py-0.5 bg-white/10 text-white rounded text-[10px]">PK</span>}
+                              {col.isForeign && <span className="ml-2 px-1.5 py-0.5 bg-white/10 text-white rounded text-[10px]">FK</span>}
                             </span>
-                            <span className="text-[#9ca3af] font-mono">{col.type}</span>
+                            <span className="text-[#a3a3a3] font-mono">{col.type}</span>
                           </div>
                         ))}
                       </div>
@@ -832,10 +832,10 @@ function SchemaView({ schema, schemaInput, setSchemaInput, analyzeSchema, loadDe
               {schema.relationships.length > 0 && (
                 <div>
                   <h3 className="text-base font-semibold mb-3">Relationships</h3>
-                  <div className="bg-[#21253a] border border-[#2d3148] rounded-lg p-4 space-y-2">
+                  <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg p-4 space-y-2">
                     {schema.relationships.map((rel, idx) => (
-                      <div key={idx} className="text-sm text-[#e5e7eb]">
-                        <code className="text-[#6366f1]">{rel.from}</code>.<code>{rel.column}</code> → <code className="text-[#10b981]">{rel.to}</code>
+                      <div key={idx} className="text-sm text-white">
+                        <code className="text-white">{rel.from}</code>.<code>{rel.column}</code> → <code className="text-[#a3a3a3]">{rel.to}</code>
                       </div>
                     ))}
                   </div>
@@ -866,15 +866,15 @@ function MetricsView({ trackedMetrics, setTrackedMetrics, selectedMetric, setSel
   return (
     <div className="flex-1 flex overflow-hidden">
       <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="px-8 py-6 border-b border-[#2d3148]">
+        <div className="px-8 py-6 border-b border-[#2a2a2a]">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-semibold mb-1">Tracked Metrics</h1>
-              <p className="text-sm text-[#9ca3af]">Metrics running on scheduled checks with anomaly detection</p>
+              <p className="text-sm text-[#a3a3a3]">Metrics running on scheduled checks with anomaly detection</p>
             </div>
             <button
               onClick={handleAddMetric}
-              className="px-4 py-2 bg-[#6366f1] text-white rounded-lg text-sm font-medium hover:bg-[#5558e3] transition-colors"
+              className="px-4 py-2 bg-white text-black rounded-lg text-sm font-medium hover:bg-[#e5e5e5] transition-colors"
             >
               + Add Metric
             </button>
@@ -887,10 +887,10 @@ function MetricsView({ trackedMetrics, setTrackedMetrics, selectedMetric, setSel
               <div className="text-center max-w-md">
                 <div className="text-6xl mb-4">📊</div>
                 <h3 className="text-lg font-semibold mb-2">No tracked metrics yet</h3>
-                <p className="text-[#9ca3af] mb-4">Start tracking metrics to monitor your product's health automatically.</p>
+                <p className="text-[#a3a3a3] mb-4">Start tracking metrics to monitor your product's health automatically.</p>
                 <button
                   onClick={handleAddMetric}
-                  className="px-6 py-3 bg-[#6366f1] text-white rounded-lg font-medium hover:bg-[#5558e3] transition-colors"
+                  className="px-6 py-3 bg-white text-black rounded-lg font-medium hover:bg-[#e5e5e5] transition-colors"
                 >
                   Add Your First Metric
                 </button>
@@ -924,20 +924,20 @@ function MetricsView({ trackedMetrics, setTrackedMetrics, selectedMetric, setSel
 // Metric Card Component
 function MetricCard({ metric, onSelect, onDelete }) {
   const statusColors = {
-    ok: 'bg-[#10b981]',
-    warning: 'bg-[#f59e0b]',
-    critical: 'bg-[#ef4444]'
+    ok: 'bg-white',
+    warning: 'bg-[#a3a3a3]',
+    critical: 'bg-[#666666]'
   };
   
   return (
-    <div className="bg-[#21253a] border border-[#2d3148] rounded-lg p-5 hover:border-[#6366f1] transition-colors cursor-pointer" onClick={onSelect}>
+    <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg p-5 hover:border-white/40 transition-colors cursor-pointer" onClick={onSelect}>
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
           <span className={`w-2 h-2 rounded-full ${statusColors[metric.status]}`}></span>
           <h3 className="font-semibold">{metric.name}</h3>
         </div>
         <div className="flex items-center gap-2">
-          <span className="px-2 py-1 bg-[#1a1d27] border border-[#2d3148] rounded text-xs text-[#9ca3af]">
+          <span className="px-2 py-1 bg-[#0a0a0a] border border-[#2a2a2a] rounded text-xs text-[#a3a3a3]">
             {metric.interval}
           </span>
           <button
@@ -945,14 +945,14 @@ function MetricCard({ metric, onSelect, onDelete }) {
               e.stopPropagation();
               onDelete();
             }}
-            className="px-2 py-1 text-xs text-[#ef4444] hover:bg-[#ef4444]/10 rounded transition-colors"
+            className="px-2 py-1 text-xs text-[#a3a3a3] hover:bg-[#0a0a0a] hover:text-white rounded transition-colors"
           >
             Delete
           </button>
         </div>
       </div>
       
-      <p className="text-sm text-[#9ca3af] mb-4">{metric.description}</p>
+      <p className="text-sm text-[#a3a3a3] mb-4">{metric.description}</p>
       
       <div className="flex items-end justify-between mb-3">
         <div>
@@ -961,11 +961,11 @@ function MetricCard({ metric, onSelect, onDelete }) {
               ? metric.currentValue.toLocaleString() 
               : metric.currentValue}
           </div>
-          <div className="text-xs text-[#9ca3af] mt-1">
+          <div className="text-xs text-[#666666] mt-1">
             Last checked {formatTimestamp(metric.lastChecked)}
           </div>
         </div>
-        <div className={`text-lg ${metric.trend === 'up' ? 'text-[#10b981]' : 'text-[#ef4444]'}`}>
+        <div className={`text-lg ${metric.trend === 'up' ? 'text-white' : 'text-[#666666]'}`}>
           {metric.trend === 'up' ? '↗' : '↘'}
         </div>
       </div>
@@ -980,12 +980,12 @@ function MetricCard({ metric, onSelect, onDelete }) {
 // Metric Detail Panel Component
 function MetricDetailPanel({ metric, onClose }) {
   return (
-    <div className="w-96 bg-[#1a1d27] border-l border-[#2d3148] overflow-y-auto">
-      <div className="p-6 border-b border-[#2d3148] flex items-center justify-between">
+    <div className="w-96 bg-[#0a0a0a] border-l border-[#2a2a2a] overflow-y-auto">
+      <div className="p-6 border-b border-[#2a2a2a] flex items-center justify-between">
         <h2 className="text-lg font-semibold">Metric Details</h2>
         <button
           onClick={onClose}
-          className="text-[#9ca3af] hover:text-[#e5e7eb] transition-colors"
+          className="text-[#a3a3a3] hover:text-white transition-colors"
         >
           ✕
         </button>
@@ -994,38 +994,38 @@ function MetricDetailPanel({ metric, onClose }) {
       <div className="p-6 space-y-6">
         <div>
           <h3 className="font-semibold mb-2">{metric.name}</h3>
-          <p className="text-sm text-[#9ca3af]">{metric.description}</p>
+          <p className="text-sm text-[#a3a3a3]">{metric.description}</p>
         </div>
         
         <div>
-          <h4 className="text-sm font-medium mb-2 text-[#9ca3af]">SQL Query</h4>
-          <pre className="bg-[#0f1117] border border-[#2d3148] rounded-lg p-3 text-xs overflow-x-auto">
+          <h4 className="text-sm font-medium mb-2 text-[#a3a3a3]">SQL Query</h4>
+          <pre className="bg-black border border-[#2a2a2a] rounded-lg p-3 text-xs overflow-x-auto">
             <code>{metric.query}</code>
           </pre>
         </div>
         
         <div>
-          <h4 className="text-sm font-medium mb-2 text-[#9ca3af]">Current Value</h4>
+          <h4 className="text-sm font-medium mb-2 text-[#a3a3a3]">Current Value</h4>
           <div className="text-3xl font-bold">{metric.currentValue.toLocaleString()}</div>
         </div>
         
         <div>
-          <h4 className="text-sm font-medium mb-3 text-[#9ca3af]">7-Day History</h4>
-          <div className="h-48 bg-[#0f1117] border border-[#2d3148] rounded-lg p-3">
+          <h4 className="text-sm font-medium mb-3 text-[#a3a3a3]">7-Day History</h4>
+          <div className="h-48 bg-black border border-[#2a2a2a] rounded-lg p-3">
             <SimpleLineChart data={metric.history} />
           </div>
         </div>
         
         <div>
-          <h4 className="text-sm font-medium mb-2 text-[#9ca3af]">Anomaly Rules</h4>
+          <h4 className="text-sm font-medium mb-2 text-[#a3a3a3]">Anomaly Rules</h4>
           <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm p-2 bg-[#0f1117] border border-[#2d3148] rounded">
+            <div className="flex items-center justify-between text-sm p-2 bg-black border border-[#2a2a2a] rounded">
               <span>Critical</span>
-              <span className="text-[#ef4444]">&gt; 20% deviation</span>
+              <span className="text-[#a3a3a3]">&gt; 20% deviation</span>
             </div>
-            <div className="flex items-center justify-between text-sm p-2 bg-[#0f1117] border border-[#2d3148] rounded">
+            <div className="flex items-center justify-between text-sm p-2 bg-black border border-[#2a2a2a] rounded">
               <span>Warning</span>
-              <span className="text-[#f59e0b]">10-20% deviation</span>
+              <span className="text-[#a3a3a3]">10-20% deviation</span>
             </div>
           </div>
         </div>
@@ -1034,7 +1034,7 @@ function MetricDetailPanel({ metric, onClose }) {
   );
 }
 
-// Alerts View Component
+// Alerts View Component - Keeping it minimal, update only if visible
 function AlertsView({ notifications, setNotifications, alerts }) {
   const updateNotification = (channel, field, value) => {
     setNotifications(prev => ({
@@ -1045,22 +1045,22 @@ function AlertsView({ notifications, setNotifications, alerts }) {
   
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="px-8 py-6 border-b border-[#2d3148]">
+      <div className="px-8 py-6 border-b border-[#2a2a2a]">
         <h1 className="text-2xl font-semibold mb-1">Notifications</h1>
-        <p className="text-sm text-[#9ca3af]">Configure where anomaly alerts are sent</p>
+        <p className="text-sm text-[#a3a3a3]">Configure where anomaly alerts are sent</p>
       </div>
       
       <div className="flex-1 overflow-y-auto px-8 py-6">
         <div className="max-w-4xl mx-auto space-y-8">
-          <div className="bg-[#21253a] border border-[#2d3148] rounded-lg p-6">
+          <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-[#4a154b] rounded-lg flex items-center justify-center text-xl">
+                <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center text-xl">
                   📢
                 </div>
                 <div>
                   <h3 className="font-semibold">Slack</h3>
-                  <p className="text-xs text-[#9ca3af]">Send alerts to Slack channel</p>
+                  <p className="text-xs text-[#a3a3a3]">Send alerts to Slack channel</p>
                 </div>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
@@ -1070,46 +1070,46 @@ function AlertsView({ notifications, setNotifications, alerts }) {
                   onChange={(e) => updateNotification('slack', 'active', e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className="w-11 h-6 bg-[#1a1d27] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#6366f1]"></div>
+                <div className="w-11 h-6 bg-[#0a0a0a] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-white"></div>
               </label>
             </div>
             
             <div className="space-y-3">
               <div>
-                <label className="text-sm text-[#9ca3af] mb-1 block">Webhook URL</label>
+                <label className="text-sm text-[#a3a3a3] mb-1 block">Webhook URL</label>
                 <input
                   type="text"
                   value={notifications.slack.webhookUrl}
                   onChange={(e) => updateNotification('slack', 'webhookUrl', e.target.value)}
                   placeholder="https://hooks.slack.com/services/..."
-                  className="w-full bg-[#1a1d27] border border-[#2d3148] rounded-lg px-3 py-2 text-sm outline-none focus:border-[#6366f1] transition-colors"
+                  className="w-full bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm outline-none focus:border-white/40 transition-colors"
                 />
               </div>
               <div>
-                <label className="text-sm text-[#9ca3af] mb-1 block">Default Channel</label>
+                <label className="text-sm text-[#a3a3a3] mb-1 block">Default Channel</label>
                 <input
                   type="text"
                   value={notifications.slack.channel}
                   onChange={(e) => updateNotification('slack', 'channel', e.target.value)}
                   placeholder="#product-alerts"
-                  className="w-full bg-[#1a1d27] border border-[#2d3148] rounded-lg px-3 py-2 text-sm outline-none focus:border-[#6366f1] transition-colors"
+                  className="w-full bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm outline-none focus:border-white/40 transition-colors"
                 />
               </div>
-              <button className="px-4 py-2 bg-[#1a1d27] border border-[#2d3148] rounded-lg text-sm hover:bg-[#21253a] transition-colors">
+              <button className="px-4 py-2 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg text-sm hover:bg-[#1a1a1a] transition-colors">
                 Test Connection
               </button>
             </div>
           </div>
           
-          <div className="bg-[#21253a] border border-[#2d3148] rounded-lg p-6">
+          <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-[#0066cc] rounded-lg flex items-center justify-center text-xl">
+                <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center text-xl">
                   ✉️
                 </div>
                 <div>
                   <h3 className="font-semibold">Email</h3>
-                  <p className="text-xs text-[#9ca3af]">Send alerts via email</p>
+                  <p className="text-xs text-[#a3a3a3]">Send alerts via email</p>
                 </div>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
@@ -1119,34 +1119,34 @@ function AlertsView({ notifications, setNotifications, alerts }) {
                   onChange={(e) => updateNotification('email', 'active', e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className="w-11 h-6 bg-[#1a1d27] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#6366f1]"></div>
+                <div className="w-11 h-6 bg-[#0a0a0a] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-white"></div>
               </label>
             </div>
             
             <div className="space-y-3">
               <div>
-                <label className="text-sm text-[#9ca3af] mb-1 block">Email Addresses</label>
+                <label className="text-sm text-[#a3a3a3] mb-1 block">Email Addresses</label>
                 <input
                   type="text"
                   value={notifications.email.addresses}
                   onChange={(e) => updateNotification('email', 'addresses', e.target.value)}
                   placeholder="alerts@company.com, pm@company.com"
-                  className="w-full bg-[#1a1d27] border border-[#2d3148] rounded-lg px-3 py-2 text-sm outline-none focus:border-[#6366f1] transition-colors"
+                  className="w-full bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm outline-none focus:border-white/40 transition-colors"
                 />
               </div>
               <div>
-                <label className="text-sm text-[#9ca3af] mb-1 block">Severity Filter</label>
+                <label className="text-sm text-[#a3a3a3] mb-1 block">Severity Filter</label>
                 <select
                   value={notifications.email.filter}
                   onChange={(e) => updateNotification('email', 'filter', e.target.value)}
-                  className="w-full bg-[#1a1d27] border border-[#2d3148] rounded-lg px-3 py-2 text-sm outline-none focus:border-[#6366f1] transition-colors"
+                  className="w-full bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm outline-none focus:border-white/40 transition-colors"
                 >
                   <option value="all">All alerts</option>
                   <option value="critical">Critical only</option>
                   <option value="warning">Warning and above</option>
                 </select>
               </div>
-              <button className="px-4 py-2 bg-[#1a1d27] border border-[#2d3148] rounded-lg text-sm hover:bg-[#21253a] transition-colors">
+              <button className="px-4 py-2 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg text-sm hover:bg-[#1a1a1a] transition-colors">
                 Send Test Email
               </button>
             </div>
@@ -1155,50 +1155,50 @@ function AlertsView({ notifications, setNotifications, alerts }) {
           <div>
             <h3 className="text-lg font-semibold mb-4">Alert Rules</h3>
             <div className="space-y-3">
-              <div className="bg-[#21253a] border border-[#2d3148] rounded-lg p-4">
+              <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg p-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="font-medium flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-[#ef4444]"></span>
+                      <span className="w-2 h-2 rounded-full bg-white"></span>
                       Critical
                     </div>
-                    <p className="text-sm text-[#9ca3af] mt-1">Deviation &gt; 20%</p>
+                    <p className="text-sm text-[#a3a3a3] mt-1">Deviation &gt; 20%</p>
                   </div>
                   <input
                     type="number"
                     defaultValue={20}
-                    className="w-20 bg-[#1a1d27] border border-[#2d3148] rounded px-2 py-1 text-sm text-center"
+                    className="w-20 bg-[#0a0a0a] border border-[#2a2a2a] rounded px-2 py-1 text-sm text-center"
                   />
                 </div>
               </div>
               
-              <div className="bg-[#21253a] border border-[#2d3148] rounded-lg p-4">
+              <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg p-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="font-medium flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-[#f59e0b]"></span>
+                      <span className="w-2 h-2 rounded-full bg-[#a3a3a3]"></span>
                       Warning
                     </div>
-                    <p className="text-sm text-[#9ca3af] mt-1">Deviation 10-20%</p>
+                    <p className="text-sm text-[#a3a3a3] mt-1">Deviation 10-20%</p>
                   </div>
                   <input
                     type="number"
                     defaultValue={10}
-                    className="w-20 bg-[#1a1d27] border border-[#2d3148] rounded px-2 py-1 text-sm text-center"
+                    className="w-20 bg-[#0a0a0a] border border-[#2a2a2a] rounded px-2 py-1 text-sm text-center"
                   />
                 </div>
               </div>
               
-              <div className="bg-[#21253a] border border-[#2d3148] rounded-lg p-4">
+              <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg p-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="font-medium flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-[#10b981]"></span>
+                      <span className="w-2 h-2 rounded-full bg-[#666666]"></span>
                       Info
                     </div>
-                    <p className="text-sm text-[#9ca3af] mt-1">Any change detected</p>
+                    <p className="text-sm text-[#a3a3a3] mt-1">Any change detected</p>
                   </div>
-                  <span className="text-sm text-[#9ca3af]">Always on</span>
+                  <span className="text-sm text-[#a3a3a3]">Always on</span>
                 </div>
               </div>
             </div>
@@ -1206,34 +1206,34 @@ function AlertsView({ notifications, setNotifications, alerts }) {
           
           <div>
             <h3 className="text-lg font-semibold mb-4">Alert History</h3>
-            <div className="bg-[#21253a] border border-[#2d3148] rounded-lg overflow-hidden">
+            <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg overflow-hidden">
               <table className="w-full text-sm">
-                <thead className="bg-[#1a1d27] border-b border-[#2d3148]">
+                <thead className="bg-[#0a0a0a] border-b border-[#2a2a2a]">
                   <tr>
-                    <th className="text-left px-4 py-3 font-medium text-[#9ca3af]">Timestamp</th>
-                    <th className="text-left px-4 py-3 font-medium text-[#9ca3af]">Metric</th>
-                    <th className="text-left px-4 py-3 font-medium text-[#9ca3af]">Severity</th>
-                    <th className="text-left px-4 py-3 font-medium text-[#9ca3af]">Channel</th>
-                    <th className="text-left px-4 py-3 font-medium text-[#9ca3af]">Status</th>
+                    <th className="text-left px-4 py-3 font-medium text-[#a3a3a3]">Timestamp</th>
+                    <th className="text-left px-4 py-3 font-medium text-[#a3a3a3]">Metric</th>
+                    <th className="text-left px-4 py-3 font-medium text-[#a3a3a3]">Severity</th>
+                    <th className="text-left px-4 py-3 font-medium text-[#a3a3a3]">Channel</th>
+                    <th className="text-left px-4 py-3 font-medium text-[#a3a3a3]">Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {alerts.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-4 py-8 text-center text-[#6b7280]">
+                      <td colSpan={5} className="px-4 py-8 text-center text-[#666666]">
                         No alerts yet
                       </td>
                     </tr>
                   ) : (
                     alerts.map((alert, idx) => (
-                      <tr key={idx} className="border-b border-[#2d3148] last:border-0">
+                      <tr key={idx} className="border-b border-[#2a2a2a] last:border-0">
                         <td className="px-4 py-3">{formatTimestamp(alert.timestamp)}</td>
                         <td className="px-4 py-3">{alert.metric}</td>
                         <td className="px-4 py-3">
                           <span className={`px-2 py-1 rounded text-xs ${
-                            alert.severity === 'critical' ? 'bg-[#ef4444]/20 text-[#ef4444]' :
-                            alert.severity === 'warning' ? 'bg-[#f59e0b]/20 text-[#f59e0b]' :
-                            'bg-[#10b981]/20 text-[#10b981]'
+                            alert.severity === 'critical' ? 'bg-white/10 text-white' :
+                            alert.severity === 'warning' ? 'bg-[#a3a3a3]/10 text-[#a3a3a3]' :
+                            'bg-[#666666]/10 text-[#666666]'
                           }`}>
                             {alert.severity}
                           </span>
@@ -1263,15 +1263,15 @@ function MobileTabBar({ activeView, setActiveView }) {
   ];
   
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-[#1a1d27] border-t border-[#2d3148] px-2 py-1 flex justify-around z-50">
+    <div className="fixed bottom-0 left-0 right-0 bg-[#0a0a0a] border-t border-[#2a2a2a] px-2 py-1 flex justify-around z-50">
       {tabs.map(tab => (
         <button
           key={tab.id}
           onClick={() => setActiveView(tab.id)}
           className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
             activeView === tab.id
-              ? 'bg-[#6366f1] text-white'
-              : 'text-[#9ca3af]'
+              ? 'bg-white text-black'
+              : 'text-[#a3a3a3]'
           }`}
         >
           <span className="text-lg">{tab.icon}</span>
@@ -1281,5 +1281,6 @@ function MobileTabBar({ activeView, setActiveView }) {
     </div>
   );
 }
+
 
 export default App;

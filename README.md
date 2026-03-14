@@ -6,7 +6,7 @@ PulseTrack is a professional, production-ready AI analytics platform that helps 
 
 ---
 
-## ✨ Key Features
+##  Key Features
 
 ### 1. **Natural Language Analytics (Chat)**
 - Query your product metrics using plain English.
@@ -30,7 +30,7 @@ PulseTrack is a professional, production-ready AI analytics platform that helps 
 
 ---
 
-## 🚀 Getting Started
+##  Getting Started
 
 PulseTrack offers flexible ways to run, from a simple demo to a full-stack deployment.
 
@@ -74,7 +74,7 @@ open pulsetrack.html
 
 ---
 
-## 🏗️ Technical Architecture
+##  Technical Architecture
 
 | Layer | Technologies |
 |-------|--------------|
@@ -86,7 +86,7 @@ open pulsetrack.html
 
 ---
 
-## 🎨 Professional Design System
+##  Professional Design System
 PulseTrack features a premium **Developer Dark Mode** designed for high visibility and aesthetic excellence:
 - **Surface**: Glassmorphic panels with subtle border glows.
 - **Palette**: Deep charcoal (#0f1117) with Indigo (#6366f1) and custom semantic colors.
@@ -94,13 +94,13 @@ PulseTrack features a premium **Developer Dark Mode** designed for high visibili
 
 ---
 
-## 🧪 Demo Mode
+## Demo Mode
 Don't have a database ready? Click **"Try with sample schema"** in the standalone demo or rely on the frontend's built-in **Mock Persistence** layer to explore all features instantly without any infrastructure.
 
 ---
 
-## 📄 License
+##  License
 Internal Product Development License.
 
 ---
-*Built with ❤️ for modern product teams.*
+*Built with <3 for modern product teams.*

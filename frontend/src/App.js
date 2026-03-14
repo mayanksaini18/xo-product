@@ -147,8 +147,8 @@ function App() {
   const loadDbConnections = async () => {
     try {
       if (USE_MOCK_DATA) {
-        // Load mock data for demo
-        setDbConnections(mockDbConnections);
+        // Only load if empty, to allow persistence during session
+        setDbConnections(prev => prev.length > 0 ? prev : mockDbConnections);
         return;
       }
       
@@ -159,7 +159,7 @@ function App() {
       console.error('Failed to load connections:', error);
       // Fallback to mock data if API fails
       if (USE_MOCK_DATA) {
-        setDbConnections(mockDbConnections);
+        setDbConnections(prev => prev.length > 0 ? prev : mockDbConnections);
       }
     }
   };
@@ -167,8 +167,8 @@ function App() {
   const loadMonitors = async () => {
     try {
       if (USE_MOCK_DATA) {
-        // Load mock data for demo
-        setMonitors(mockMonitors);
+        // Only load if empty
+        setMonitors(prev => prev.length > 0 ? prev : mockMonitors);
         return;
       }
       
@@ -179,7 +179,7 @@ function App() {
       console.error('Failed to load monitors:', error);
       // Fallback to mock data if API fails
       if (USE_MOCK_DATA) {
-        setMonitors(mockMonitors);
+        setMonitors(prev => prev.length > 0 ? prev : mockMonitors);
       }
     }
   };
@@ -219,6 +219,7 @@ function App() {
         {activeView === 'connections' && (
           <ConnectionsView
             dbConnections={dbConnections}
+            setDbConnections={setDbConnections}
             loadDbConnections={loadDbConnections}
             showToast={showToast}
             setSelectedConnection={setSelectedConnection}
@@ -228,6 +229,7 @@ function App() {
         {activeView === 'create-monitor' && (
           <CreateMonitorView
             dbConnections={dbConnections}
+            setMonitors={setMonitors}
             loadMonitors={loadMonitors}
             showToast={showToast}
             setActiveView={setActiveView}
@@ -343,7 +345,7 @@ function Sidebar({ activeView, setActiveView, dbConnections, monitors }) {
 }
 
 // Database Connections View
-function ConnectionsView({ dbConnections, loadDbConnections, showToast, setSelectedConnection }) {
+function ConnectionsView({ dbConnections, setDbConnections, loadDbConnections, showToast, setSelectedConnection }) {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -362,6 +364,19 @@ function ConnectionsView({ dbConnections, loadDbConnections, showToast, setSelec
     setLoading(true);
     
     try {
+      if (USE_MOCK_DATA) {
+        const newConn = {
+          id: generateId(),
+          ...formData,
+          tables: ['users', 'events', 'orders', 'products'],
+          created_at: new Date().toISOString()
+        };
+        setDbConnections(prev => [...prev, newConn]);
+        showToast(`Connected to ${formData.name}!`, 'success');
+        setShowForm(false);
+        return;
+      }
+
       const res = await fetch(`${API}/db-connections`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -587,7 +602,7 @@ function ConnectionsView({ dbConnections, loadDbConnections, showToast, setSelec
 }
 
 // Create Monitor View - CONTINUED IN NEXT MESSAGE
-function CreateMonitorView({ dbConnections, loadMonitors, showToast, setActiveView }) {
+function CreateMonitorView({ dbConnections, setMonitors, loadMonitors, showToast, setActiveView }) {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     name: '',
@@ -626,6 +641,22 @@ function CreateMonitorView({ dbConnections, loadMonitors, showToast, setActiveVi
     setLoading(true);
     
     try {
+      if (USE_MOCK_DATA) {
+        const newMonitor = {
+          id: generateId(),
+          ...formData,
+          status: 'active',
+          last_run: new Date().toISOString(),
+          last_value: { [formData.name.toLowerCase().replace(/\s+/g, '_')]: Math.floor(Math.random() * 1000) },
+          created_at: new Date().toISOString(),
+          history: []
+        };
+        setMonitors(prev => [...prev, newMonitor]);
+        showToast(`Monitor "${formData.name}" created successfully!`, 'success');
+        setActiveView('monitors');
+        return;
+      }
+
       const payload = {
         ...formData,
         alert_threshold: formData.alert_threshold ? parseFloat(formData.alert_threshold) : null

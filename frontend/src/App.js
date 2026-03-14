@@ -15,59 +15,33 @@ import {
   CheckCircle2,
   AlertTriangle,
   XCircle,
-  X
+  X,
+  Play,
+  Pause,
+  Trash2,
+  Plus,
+  BarChart3,
+  Settings,
+  Check,
+  AlertCircle
 } from 'lucide-react';
 import "@/App.css";
 
-// Constants
-const API_KEY = 'sk-emergent-cEd44295e39AeF6A2F';
-const MODEL = 'claude-sonnet-4-20250514';
-const API_URL = 'https://api.anthropic.com/v1/messages';
-
-const SYSTEM_PROMPT = "You are an AI-powered Product Metrics Tracking Assistant embedded in a product analytics tool. Your job is to translate natural language product questions into SQL queries, detect anomalies in metrics, suggest insights, and help configure automated metric tracking. When you provide SQL queries, wrap them in ```sql code blocks. When suggesting follow-up questions, prefix them with numbers like 1️⃣, 2️⃣, 3️⃣.";
-
-const SAMPLE_SCHEMA = `CREATE TABLE users (
-  id SERIAL PRIMARY KEY,
-  email TEXT NOT NULL,
-  created_at TIMESTAMP DEFAULT NOW(),
-  last_login TIMESTAMP,
-  subscription_tier TEXT
-);
-
-CREATE TABLE events (
-  id SERIAL PRIMARY KEY,
-  user_id INTEGER REFERENCES users(id),
-  event_name TEXT NOT NULL,
-  event_timestamp TIMESTAMP DEFAULT NOW(),
-  properties JSONB
-);
-
-CREATE TABLE orders (
-  id SERIAL PRIMARY KEY,
-  user_id INTEGER REFERENCES users(id),
-  amount DECIMAL(10,2),
-  status TEXT,
-  created_at TIMESTAMP DEFAULT NOW()
-);
-
-CREATE TABLE products (
-  id SERIAL PRIMARY KEY,
-  name TEXT NOT NULL,
-  price DECIMAL(10,2),
-  category TEXT,
-  created_at TIMESTAMP DEFAULT NOW()
-);`;
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const API = `${BACKEND_URL}/api`;
 
 // Utility Functions
 const generateId = () => Math.random().toString(36).substr(2, 9);
 const copyToClipboard = (text) => navigator.clipboard.writeText(text);
 const formatTimestamp = (date) => {
+  if (!date) return 'Never';
+  const d = new Date(date);
   return new Intl.DateTimeFormat('en-US', {
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit'
-  }).format(date);
+  }).format(d);
 };
 
 // Premium Line Chart Component
@@ -84,7 +58,7 @@ function PremiumLineChart({ data }) {
     
     ctx.clearRect(0, 0, width, height);
     
-    const values = data.map(d => d.value);
+    const values = data.map(d => typeof d === 'object' ? d.value : d);
     const max = Math.max(...values);
     const min = Math.min(...values);
     const range = max - min || 1;
@@ -95,9 +69,9 @@ function PremiumLineChart({ data }) {
     gradient.addColorStop(1, 'rgba(255, 255, 255, 0.05)');
     
     ctx.beginPath();
-    data.forEach((point, i) => {
-      const x = (i / (data.length - 1)) * width;
-      const y = height - ((point.value - min) / range) * height;
+    values.forEach((value, i) => {
+      const x = (i / (values.length - 1)) * width;
+      const y = height - ((value - min) / range) * height;
       if (i === 0) ctx.moveTo(x, y);
       else ctx.lineTo(x, y);
     });
@@ -111,9 +85,9 @@ function PremiumLineChart({ data }) {
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    data.forEach((point, i) => {
-      const x = (i / (data.length - 1)) * width;
-      const y = height - ((point.value - min) / range) * height;
+    values.forEach((value, i) => {
+      const x = (i / (values.length - 1)) * width;
+      const y = height - ((value - min) / range) * height;
       if (i === 0) ctx.moveTo(x, y);
       else ctx.lineTo(x, y);
     });
@@ -146,315 +120,108 @@ function Toast({ message, type = 'success', onClose }) {
 
 // Main App Component
 function App() {
-  const [activeView, setActiveView] = useState('chat');
-  const [schema, setSchema] = useState({ raw: '', tables: [], relationships: [] });
-  const [messages, setMessages] = useState([]);
-  const [trackedMetrics, setTrackedMetrics] = useState([]);
-  const [notifications, setNotifications] = useState({
-    slack: { webhookUrl: '', channel: '', active: false },
-    email: { addresses: '', filter: 'all', active: false }
-  });
+  const [activeView, setActiveView] = useState('connections');
+  const [dbConnections, setDbConnections] = useState([]);
+  const [monitors, setMonitors] = useState([]);
   const [alerts, setAlerts] = useState([]);
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [inputValue, setInputValue] = useState('');
-  const [schemaInput, setSchemaInput] = useState('');
-  const [selectedMetric, setSelectedMetric] = useState(null);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [selectedConnection, setSelectedConnection] = useState(null);
+  const [selectedMonitor, setSelectedMonitor] = useState(null);
   const [toast, setToast] = useState(null);
-  const [placeholderIndex, setPlaceholderIndex] = useState(0);
-  
-  const placeholders = [
-    "Ask about product metrics...",
-    "Check user growth trends",
-    "Detect anomalies after deploy",
-    "Analyze conversion funnel"
-  ];
-  
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-  
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setPlaceholderIndex((prev) => (prev + 1) % placeholders.length);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
+  const [loading, setLoading] = useState(false);
   
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
   };
   
-  const generateSparklineData = (baseValue, points) => {
-    return Array.from({ length: points }, (_, i) => ({
-      value: baseValue * (0.85 + Math.random() * 0.3)
-    }));
-  };
+  useEffect(() => {
+    loadDbConnections();
+    loadMonitors();
+    loadAlerts();
+  }, []);
   
-  const loadDemoMode = () => {
-    setSchemaInput(SAMPLE_SCHEMA);
-    analyzeSchema(SAMPLE_SCHEMA);
-    
-    const sampleMetrics = [
-      {
-        id: generateId(),
-        name: 'Daily Active Users',
-        description: 'Users who logged in today',
-        query: 'SELECT COUNT(DISTINCT user_id) FROM events WHERE event_timestamp >= CURRENT_DATE',
-        interval: 'Daily',
-        status: 'ok',
-        currentValue: 1247,
-        trend: 'up',
-        change: '+12%',
-        lastChecked: new Date(),
-        history: generateSparklineData(1247, 24)
-      },
-      {
-        id: generateId(),
-        name: 'Error Rate',
-        description: 'Percentage of failed events',
-        query: 'SELECT (COUNT(*) FILTER (WHERE event_name = \'error\') * 100.0 / COUNT(*)) FROM events',
-        interval: 'Hourly',
-        status: 'warning',
-        currentValue: 2.4,
-        trend: 'up',
-        change: '+0.3%',
-        lastChecked: new Date(),
-        history: generateSparklineData(2.4, 24)
-      },
-      {
-        id: generateId(),
-        name: 'Revenue Today',
-        description: 'Total revenue from completed orders',
-        query: 'SELECT SUM(amount) FROM orders WHERE status = \'completed\' AND created_at >= CURRENT_DATE',
-        interval: 'Hourly',
-        status: 'ok',
-        currentValue: 12450,
-        trend: 'up',
-        change: '+8.2%',
-        lastChecked: new Date(),
-        history: generateSparklineData(12450, 24)
-      }
-    ];
-    
-    setTrackedMetrics(sampleMetrics);
-    showToast('Demo mode loaded with sample data', 'success');
-  };
-  
-  const analyzeSchema = async (schemaText) => {
-    setSchema({ raw: schemaText, tables: [], relationships: [] });
-    
-    const tableMatches = schemaText.matchAll(/CREATE TABLE (\w+) \(([\s\S]*?)\);/g);
-    const tables = [];
-    const relationships = [];
-    
-    for (const match of tableMatches) {
-      const tableName = match[1];
-      const columns = match[2].split('\n').map(line => line.trim()).filter(Boolean);
-      
-      const parsedColumns = columns.map(col => {
-        const parts = col.split(/\s+/);
-        const name = parts[0];
-        const type = parts[1];
-        const isPrimary = col.includes('PRIMARY KEY');
-        const isForeign = col.includes('REFERENCES');
-        
-        if (isForeign) {
-          const refMatch = col.match(/REFERENCES (\w+)\((\w+)\)/);
-          if (refMatch) {
-            relationships.push({
-              from: tableName,
-              to: refMatch[1],
-              column: name
-            });
-          }
-        }
-        
-        return { name, type, isPrimary, isForeign };
-      });
-      
-      tables.push({ name: tableName, columns: parsedColumns });
-    }
-    
-    setSchema({ raw: schemaText, tables, relationships });
-    
-    const analysisMessage = `Here is my SQL schema:\n\n${schemaText}\n\nPlease confirm you understand it and suggest 3 useful starter queries I can ask.`;
-    await sendMessage(analysisMessage, true);
-  };
-  
-  const sendMessage = async (text, isAutomatic = false) => {
-    if (!text.trim() && !isAutomatic) return;
-    
-    const userMessage = {
-      id: generateId(),
-      role: 'user',
-      content: text,
-      timestamp: new Date()
-    };
-    
-    setMessages(prev => [...prev, userMessage]);
-    if (!isAutomatic) setInputValue('');
-    setIsStreaming(true);
-    
-    const assistantMessage = {
-      id: generateId(),
-      role: 'assistant',
-      content: '',
-      timestamp: new Date(),
-      isStreaming: true
-    };
-    
-    setMessages(prev => [...prev, assistantMessage]);
-    
+  const loadDbConnections = async () => {
     try {
-      const conversationHistory = [...messages, userMessage].map(msg => ({
-        role: msg.role === 'assistant' ? 'assistant' : 'user',
-        content: msg.content
-      }));
-      
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': API_KEY,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: MODEL,
-          max_tokens: 4096,
-          system: SYSTEM_PROMPT,
-          messages: conversationHistory,
-          stream: true,
-        }),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`API Error: ${response.statusText}`);
-      }
-      
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let fullContent = '';
-      
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        
-        const chunk = decoder.decode(value);
-        const lines = chunk.split('\n');
-        
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6);
-            if (data === '[DONE]') continue;
-            
-            try {
-              const event = JSON.parse(data);
-              if (event.type === 'content_block_delta' && event.delta?.text) {
-                fullContent += event.delta.text;
-                setMessages(prev => prev.map(msg =>
-                  msg.id === assistantMessage.id
-                    ? { ...msg, content: fullContent }
-                    : msg
-                ));
-              }
-            } catch (e) {
-              // Skip malformed events
-            }
-          }
-        }
-      }
-      
-      setMessages(prev => prev.map(msg =>
-        msg.id === assistantMessage.id
-          ? { ...msg, isStreaming: false }
-          : msg
-      ));
-      
+      const res = await fetch(`${API}/db-connections`);
+      const data = await res.json();
+      setDbConnections(data);
     } catch (error) {
-      setMessages(prev => prev.map(msg =>
-        msg.id === assistantMessage.id
-          ? { ...msg, content: `Error: ${error.message}`, isStreaming: false }
-          : msg
-      ));
-      showToast('Failed to connect to Claude', 'error');
-    } finally {
-      setIsStreaming(false);
+      console.error('Failed to load connections:', error);
     }
   };
   
-  const handleKeyDown = (e) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-      e.preventDefault();
-      sendMessage(inputValue);
+  const loadMonitors = async () => {
+    try {
+      const res = await fetch(`${API}/monitors`);
+      const data = await res.json();
+      setMonitors(data);
+    } catch (error) {
+      console.error('Failed to load monitors:', error);
+    }
+  };
+  
+  const loadAlerts = async () => {
+    try {
+      const res = await fetch(`${API}/alerts`);
+      const data = await res.json();
+      setAlerts(data);
+    } catch (error) {
+      console.error('Failed to load alerts:', error);
     }
   };
   
   return (
     <div className="flex h-screen bg-black text-white overflow-hidden">
       {/* Sidebar */}
-      {!isMobile && (
-        <Sidebar 
-          activeView={activeView} 
-          setActiveView={setActiveView} 
-          schema={schema}
-        />
-      )}
+      <Sidebar 
+        activeView={activeView} 
+        setActiveView={setActiveView} 
+        dbConnections={dbConnections}
+        monitors={monitors}
+      />
       
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {activeView === 'chat' && (
-          <ChatView
-            messages={messages}
-            isStreaming={isStreaming}
-            inputValue={inputValue}
-            setInputValue={setInputValue}
-            sendMessage={sendMessage}
-            handleKeyDown={handleKeyDown}
-            schema={schema}
-            setActiveView={setActiveView}
-            loadDemoMode={loadDemoMode}
-            placeholder={placeholders[placeholderIndex]}
+        {activeView === 'connections' && (
+          <ConnectionsView
+            dbConnections={dbConnections}
+            loadDbConnections={loadDbConnections}
+            showToast={showToast}
+            setSelectedConnection={setSelectedConnection}
           />
         )}
         
-        {activeView === 'schema' && (
-          <SchemaView
-            schema={schema}
-            schemaInput={schemaInput}
-            setSchemaInput={setSchemaInput}
-            analyzeSchema={analyzeSchema}
-            loadDemoMode={loadDemoMode}
+        {activeView === 'create-monitor' && (
+          <CreateMonitorView
+            dbConnections={dbConnections}
+            loadMonitors={loadMonitors}
+            showToast={showToast}
+            setActiveView={setActiveView}
           />
         )}
         
-        {activeView === 'metrics' && (
-          <MetricsView
-            trackedMetrics={trackedMetrics}
-            setTrackedMetrics={setTrackedMetrics}
-            selectedMetric={selectedMetric}
-            setSelectedMetric={setSelectedMetric}
-            setActiveView={setActiveView}
-            setInputValue={setInputValue}
+        {activeView === 'monitors' && (
+          <MonitorsView
+            monitors={monitors}
+            loadMonitors={loadMonitors}
+            showToast={showToast}
+            setSelectedMonitor={setSelectedMonitor}
           />
         )}
         
         {activeView === 'alerts' && (
           <AlertsView
-            notifications={notifications}
-            setNotifications={setNotifications}
             alerts={alerts}
+            loadAlerts={loadAlerts}
+          />
+        )}
+        
+        {activeView === 'reports' && (
+          <ReportsView
+            monitors={monitors}
           />
         )}
       </div>
-      
-      {/* Mobile Bottom Nav */}
-      {isMobile && (
-        <MobileTabBar activeView={activeView} setActiveView={setActiveView} />
-      )}
       
       {/* Toast Notifications */}
       {toast && (
@@ -469,12 +236,13 @@ function App() {
 }
 
 // Premium Sidebar Component
-function Sidebar({ activeView, setActiveView, schema }) {
+function Sidebar({ activeView, setActiveView, dbConnections, monitors }) {
   const navItems = [
-    { id: 'chat', label: 'Chat', icon: MessageSquare },
-    { id: 'metrics', label: 'Tracked Metrics', icon: Activity },
+    { id: 'connections', label: 'Database', icon: Database },
+    { id: 'create-monitor', label: 'Create Monitor', icon: Plus },
+    { id: 'monitors', label: 'Active Monitors', icon: Activity },
     { id: 'alerts', label: 'Alerts', icon: Bell },
-    { id: 'schema', label: 'Schema', icon: Database },
+    { id: 'reports', label: 'Reports', icon: BarChart3 },
   ];
   
   return (
@@ -485,7 +253,10 @@ function Sidebar({ activeView, setActiveView, schema }) {
           <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
             <Activity className="w-5 h-5 text-black" />
           </div>
-          <span className="text-lg font-semibold tracking-tight">PulseTrack</span>
+          <div>
+            <div className="text-lg font-semibold tracking-tight">PulseTrack</div>
+            <div className="text-xs text-gray-500">Feature Monitor</div>
+          </div>
         </div>
       </div>
       
@@ -521,22 +292,15 @@ function Sidebar({ activeView, setActiveView, schema }) {
       
       {/* Bottom Section */}
       <div className="p-4 border-t border-white/10 space-y-3">
-        <div className="flex items-center gap-2 text-xs text-gray-400">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-          </span>
-          <span>Connected to Claude</span>
-        </div>
-        
         <div className="px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg">
-          <div className="text-xs font-medium text-gray-400 mb-1">Schema Status</div>
+          <div className="text-xs font-medium text-gray-400 mb-1">Status</div>
           <div className="text-sm font-semibold">
-            {schema.tables.length > 0 ? (
-              <span className="text-white">{schema.tables.length} tables loaded</span>
-            ) : (
-              <span className="text-gray-500">No schema</span>
-            )}
+            <div className="flex items-center gap-2">
+              <span className="text-white">{dbConnections.length} databases</span>
+            </div>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-green-500">{monitors.filter(m => m.status === 'active').length} active</span>
+            </div>
           </div>
         </div>
       </div>
@@ -544,274 +308,56 @@ function Sidebar({ activeView, setActiveView, schema }) {
   );
 }
 
-// Chat View Component
-function ChatView({ messages, isStreaming, inputValue, setInputValue, sendMessage, handleKeyDown, schema, setActiveView, loadDemoMode, placeholder }) {
-  const messagesEndRef = useRef(null);
-  
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-  
-  return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      {/* Header */}
-      <div className="px-8 py-6 border-b border-white/10 backdrop-blur-sm bg-black/50">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold mb-1">Ask anything about your product</h1>
-            <p className="text-sm text-gray-400">Natural language → SQL → Insights</p>
-          </div>
-          <div>
-            {schema.tables.length > 0 ? (
-              <span className="px-3 py-1.5 bg-white/10 text-white border border-white/20 rounded-full text-xs font-medium">
-                ✓ {schema.tables.length} tables
-              </span>
-            ) : (
-              <span className="px-3 py-1.5 bg-white/5 text-gray-500 border border-white/10 rounded-full text-xs font-medium">
-                No schema
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-      
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto px-8 py-6">
-        {messages.length === 0 ? (
-          <WelcomeCard setActiveView={setActiveView} loadDemoMode={loadDemoMode} />
-        ) : (
-          <div className="max-w-4xl mx-auto space-y-6">
-            {messages.map((msg, idx) => (
-              <Message key={msg.id} message={msg} sendMessage={sendMessage} index={idx} />
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
-        )}
-      </div>
-      
-      {/* Premium Input Area */}
-      <div className="px-8 py-6 border-t border-white/10 backdrop-blur-sm bg-black/50">
-        <div className="max-w-4xl mx-auto">
-          <div className="relative flex items-end gap-3 glass rounded-xl p-3 border border-white/10 glow-on-hover">
-            <textarea
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={placeholder}
-              className="flex-1 bg-transparent text-white placeholder-gray-500 outline-none text-sm max-h-32 min-h-[40px] resize-none"
-              rows={1}
-              disabled={isStreaming}
-              style={{ transition: 'all 0.3s' }}
-            />
-            <button
-              onClick={() => sendMessage(inputValue)}
-              disabled={isStreaming || !inputValue.trim()}
-              className="btn-hover px-4 py-2 bg-white text-black rounded-lg text-sm font-medium disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {isStreaming ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : (
-                <Send size={16} />
-              )}
-              <span>Send</span>
-            </button>
-          </div>
-          <div className="text-xs text-gray-500 mt-2 text-center">
-            Press <kbd className="px-1.5 py-0.5 bg-white/5 border border-white/10 rounded text-gray-400">⌘ + Enter</kbd> to send
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Welcome Card Component
-function WelcomeCard({ setActiveView, loadDemoMode }) {
-  return (
-    <div className="flex items-center justify-center h-full">
-      <div className="text-center max-w-md fade-in">
-        <div className="w-16 h-16 bg-white/10 backdrop-blur-sm rounded-2xl mx-auto mb-6 flex items-center justify-center border border-white/20">
-          <Zap className="w-8 h-8 text-white" />
-        </div>
-        <h2 className="text-2xl font-semibold mb-3">Track your feature's impact</h2>
-        <p className="text-gray-400 mb-8 leading-relaxed">
-          Paste your SQL schema to start analyzing your product metrics with AI.
-        </p>
-        <div className="flex flex-col gap-3">
-          <button
-            onClick={() => setActiveView('schema')}
-            className="btn-hover px-6 py-3 bg-white text-black rounded-lg font-medium flex items-center justify-center gap-2 shadow-xl"
-          >
-            <Database size={18} />
-            Load SQL Schema
-          </button>
-          <button
-            onClick={loadDemoMode}
-            className="btn-hover px-6 py-3 bg-white/5 text-white border border-white/10 rounded-lg font-medium hover:bg-white/10"
-          >
-            Try with sample schema
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Message Component  
-function Message({ message, sendMessage, index }) {
-  if (message.role === 'user') {
-    return (
-      <div className="flex justify-end fade-in" style={{ animationDelay: `${index * 50}ms` }}>
-        <div className="max-w-[70%] bg-white text-black px-5 py-3 rounded-2xl rounded-tr-md shadow-xl">
-          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-          <div className="text-xs opacity-50 mt-2">{formatTimestamp(message.timestamp)}</div>
-        </div>
-      </div>
-    );
-  }
-  
-  return (
-    <div className="flex justify-start fade-in" style={{ animationDelay: `${index * 50}ms` }}>
-      <div className="max-w-[80%] glass border border-white/10 px-6 py-4 rounded-2xl rounded-tl-md shadow-xl">
-        <RichMessageContent content={message.content} sendMessage={sendMessage} />
-        {message.isStreaming && <span className="inline-block w-0.5 h-4 bg-white ml-1 cursor-blink">|</span>}
-        <div className="text-xs text-gray-500 mt-3">{formatTimestamp(message.timestamp)}</div>
-      </div>
-    </div>
-  );
-}
-
-// Rich Message Content Component
-function RichMessageContent({ content, sendMessage }) {
-  const parts = [];
-  let currentIndex = 0;
-  
-  const sqlRegex = /```sql\n([\s\S]*?)```/g;
-  const jsonRegex = /```json\n([\s\S]*?)```/g;
-  
-  let match;
-  const sqlBlocks = [];
-  while ((match = sqlRegex.exec(content)) !== null) {
-    sqlBlocks.push({ start: match.index, end: match.index + match[0].length, sql: match[1] });
-  }
-  
-  const jsonBlocks = [];
-  while ((match = jsonRegex.exec(content)) !== null) {
-    jsonBlocks.push({ start: match.index, end: match.index + match[0].length, json: match[1] });
-  }
-  
-  const allBlocks = [...sqlBlocks.map(b => ({ ...b, type: 'sql' })), ...jsonBlocks.map(b => ({ ...b, type: 'json' }))].sort((a, b) => a.start - b.start);
-  
-  allBlocks.forEach((block) => {
-    if (block.start > currentIndex) {
-      parts.push({ type: 'text', content: content.slice(currentIndex, block.start) });
-    }
-    parts.push(block);
-    currentIndex = block.end;
+// Database Connections View
+function ConnectionsView({ dbConnections, loadDbConnections, showToast, setSelectedConnection }) {
+  const [showForm, setShowForm] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    db_type: 'postgres',
+    host: '',
+    port: 5432,
+    database: '',
+    username: '',
+    password: ''
   });
+  const [loading, setLoading] = useState(false);
+  const [testingConnection, setTestingConnection] = useState(false);
   
-  if (currentIndex < content.length) {
-    parts.push({ type: 'text', content: content.slice(currentIndex) });
-  }
-  
-  return (
-    <div className="space-y-4">
-      {parts.map((part, idx) => {
-        if (part.type === 'sql') {
-          return <SQLBlock key={idx} sql={part.sql} />;
-        } else if (part.type === 'json') {
-          return <JSONBlock key={idx} json={part.json} />;
-        } else {
-          return <TextContent key={idx} content={part.content} sendMessage={sendMessage} />;
-        }
-      })}
-    </div>
-  );
-}
-
-// SQL Block Component
-function SQLBlock({ sql }) {
-  const [copied, setCopied] = useState(false);
-  
-  const handleCopy = () => {
-    copyToClipboard(sql);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-  
-  return (
-    <div className="relative my-4">
-      <div className="bg-black/50 border border-white/10 rounded-lg overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-2 bg-white/5 border-b border-white/10">
-          <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">SQL Query</span>
-          <button
-            onClick={handleCopy}
-            className="btn-hover text-xs px-3 py-1 bg-white/10 text-white border border-white/10 rounded hover:bg-white/20 transition-all flex items-center gap-1.5"
-          >
-            {copied ? <CheckCircle2 size={12} /> : <Copy size={12} />}
-            {copied ? 'Copied' : 'Copy'}
-          </button>
-        </div>
-        <pre className="p-4 text-xs overflow-x-auto font-mono leading-relaxed">
-          <code className="text-white">{sql}</code>
-        </pre>
-      </div>
-    </div>
-  );
-}
-
-// JSON Block Component
-function JSONBlock({ json }) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  
-  return (
-    <div className="my-4">
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full text-left px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-xs font-medium text-gray-400 hover:bg-white/10 transition-all flex items-center gap-2"
-      >
-        {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-        JSON Data
-      </button>
-      {isExpanded && (
-        <pre className="mt-2 p-4 bg-black/50 border border-white/10 rounded-lg text-xs overflow-x-auto font-mono">
-          <code className="text-white">{json}</code>
-        </pre>
-      )}
-    </div>
-  );
-}
-
-// Text Content Component
-function TextContent({ content, sendMessage }) {
-  const suggestionRegex = /([1-3]️⃣[^\n]+)/g;
-  const parts = content.split(suggestionRegex);
-  
-  return (
-    <div className="text-sm text-white space-y-3 leading-relaxed">
-      {parts.map((part, idx) => {
-        if (/^[1-3]️⃣/.test(part)) {
-          return (
-            <button
-              key={idx}
-              onClick={() => sendMessage(part.replace(/^[1-3]️⃣\s*/, ''))}
-              className="block w-full text-left px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm hover:bg-white/10 hover:border-white/20 transition-all"
-            >
-              {part}
-            </button>
-          );
-        }
-        return <p key={idx} className="whitespace-pre-wrap">{part}</p>;
-      })}
-    </div>
-  );
-}
-
-// Schema View Component (continued in next message due to size)
-function SchemaView({ schema, schemaInput, setSchemaInput, analyzeSchema, loadDemoMode }) {
-  const handleLoadSchema = () => {
-    if (schemaInput.trim()) {
-      analyzeSchema(schemaInput);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    
+    try {
+      const res = await fetch(`${API}/db-connections`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.detail || 'Connection failed');
+      }
+      
+      const data = await res.json();
+      showToast(`Connected to ${data.name}! Found ${data.tables.length} tables`, 'success');
+      setShowForm(false);
+      loadDbConnections();
+      
+      // Reset form
+      setFormData({
+        name: '',
+        db_type: 'postgres',
+        host: '',
+        port: 5432,
+        database: '',
+        username: '',
+        password: ''
+      });
+    } catch (error) {
+      showToast(error.message, 'error');
+    } finally {
+      setLoading(false);
     }
   };
   
@@ -820,126 +366,184 @@ function SchemaView({ schema, schemaInput, setSchemaInput, analyzeSchema, loadDe
       <div className="px-8 py-6 border-b border-white/10 backdrop-blur-sm bg-black/50">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold mb-1">SQL Schema</h1>
-            <p className="text-sm text-gray-400">Paste CREATE TABLE statements</p>
+            <h1 className="text-2xl font-semibold mb-1">Database Connections</h1>
+            <p className="text-sm text-gray-400">Connect to your product database to start monitoring</p>
           </div>
-          <div>
-            {schema.tables.length > 0 ? (
-              <span className="px-3 py-1.5 bg-white/10 text-white border border-white/20 rounded-full text-xs font-medium">
-                Loaded
-              </span>
-            ) : (
-              <span className="px-3 py-1.5 bg-white/5 text-gray-500 border border-white/10 rounded-full text-xs font-medium">
-                Not loaded
-              </span>
-            )}
-          </div>
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="btn-hover px-4 py-2 bg-white text-black rounded-lg text-sm font-medium flex items-center gap-2"
+          >
+            <Plus size={16} />
+            Add Database
+          </button>
         </div>
       </div>
       
       <div className="flex-1 overflow-y-auto px-8 py-6">
-        <div className="max-w-5xl mx-auto space-y-6">
-          {schema.tables.length === 0 ? (
-            <div className="fade-in">
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <label className="text-sm font-medium">Schema SQL</label>
-                  <span className={`text-xs ${schemaInput.length > 10000 ? 'text-yellow-500' : 'text-gray-500'}`}>
-                    {schemaInput.length} characters
-                  </span>
-                </div>
-                <textarea
-                  value={schemaInput}
-                  onChange={(e) => setSchemaInput(e.target.value)}
-                  placeholder="CREATE TABLE users (&#10;  id SERIAL PRIMARY KEY,&#10;  email TEXT,&#10;  created_at TIMESTAMP&#10;);"
-                  className="w-full h-96 bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-sm font-mono text-white placeholder-gray-600 outline-none focus:border-white/30 transition-all"
-                />
-              </div>
+        <div className="max-w-4xl mx-auto space-y-6">
+          {showForm && (
+            <div className="glass border border-white/10 rounded-xl p-6 fade-in">
+              <h3 className="text-lg font-semibold mb-4">Add Database Connection</h3>
               
-              <div className="flex gap-3 mt-4">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Connection Name</label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    placeholder="Production Database"
+                    className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-white/30 transition-all"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Database Type</label>
+                  <select
+                    value={formData.db_type}
+                    onChange={(e) => setFormData({
+                      ...formData, 
+                      db_type: e.target.value,
+                      port: e.target.value === 'postgres' ? 5432 : 3306
+                    })}
+                    className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-white/30 transition-all"
+                  >
+                    <option value="postgres">PostgreSQL</option>
+                    <option value="mysql">MySQL</option>
+                  </select>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm text-gray-400 mb-2 block">Host</label>
+                    <input
+                      type="text"
+                      value={formData.host}
+                      onChange={(e) => setFormData({...formData, host: e.target.value})}
+                      placeholder="localhost"
+                      className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-white/30 transition-all"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-400 mb-2 block">Port</label>
+                    <input
+                      type="number"
+                      value={formData.port}
+                      onChange={(e) => setFormData({...formData, port: parseInt(e.target.value)})}
+                      className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-white/30 transition-all"
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Database Name</label>
+                  <input
+                    type="text"
+                    value={formData.database}
+                    onChange={(e) => setFormData({...formData, database: e.target.value})}
+                    placeholder="myapp_production"
+                    className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-white/30 transition-all"
+                    required
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm text-gray-400 mb-2 block">Username</label>
+                    <input
+                      type="text"
+                      value={formData.username}
+                      onChange={(e) => setFormData({...formData, username: e.target.value})}
+                      className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-white/30 transition-all"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-400 mb-2 block">Password</label>
+                    <input
+                      type="password"
+                      value={formData.password}
+                      onChange={(e) => setFormData({...formData, password: e.target.value})}
+                      className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-white/30 transition-all"
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="btn-hover px-6 py-2.5 bg-white text-black rounded-lg font-medium disabled:opacity-30 flex items-center gap-2"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" />
+                        Connecting...
+                      </>
+                    ) : (
+                      <>
+                        <Check size={16} />
+                        Connect Database
+                      </>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowForm(false)}
+                    className="btn-hover px-6 py-2.5 bg-white/5 text-white border border-white/10 rounded-lg font-medium"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+          
+          {dbConnections.length === 0 && !showForm ? (
+            <div className="flex items-center justify-center h-96">
+              <div className="text-center max-w-md fade-in">
+                <div className="w-16 h-16 bg-white/10 backdrop-blur-sm rounded-2xl mx-auto mb-6 flex items-center justify-center border border-white/20">
+                  <Database className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-lg font-semibold mb-3">No databases connected</h3>
+                <p className="text-gray-400 mb-6">Connect your first database to start monitoring product metrics.</p>
                 <button
-                  onClick={handleLoadSchema}
-                  disabled={!schemaInput.trim()}
-                  className="btn-hover px-6 py-3 bg-white text-black rounded-lg font-medium disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-2"
+                  onClick={() => setShowForm(true)}
+                  className="btn-hover px-6 py-3 bg-white text-black rounded-lg font-medium"
                 >
-                  <Database size={18} />
-                  Load Schema
-                </button>
-                <button
-                  onClick={loadDemoMode}
-                  className="btn-hover px-6 py-3 bg-white/5 text-white border border-white/10 rounded-lg font-medium hover:bg-white/10"
-                >
-                  Load Sample Schema
+                  Add Database Connection
                 </button>
               </div>
             </div>
           ) : (
-            <div className="space-y-6 fade-in">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold">Loaded Schema</h2>
-                <button
-                  onClick={() => {
-                    setSchemaInput('');
-                    analyzeSchema('');
-                  }}
-                  className="btn-hover px-4 py-2 bg-white/5 text-white border border-white/10 rounded-lg text-sm font-medium hover:bg-white/10"
-                >
-                  Change Schema
-                </button>
-              </div>
-              
-              <details className="bg-white/5 border border-white/10 rounded-lg overflow-hidden">
-                <summary className="px-4 py-3 cursor-pointer font-medium text-sm hover:bg-white/10 transition-all flex items-center gap-2">
-                  <ChevronRight size={16} className="transition-transform" />
-                  Raw Schema SQL
-                </summary>
-                <pre className="px-4 py-3 border-t border-white/10 text-xs font-mono text-gray-400 overflow-x-auto">
-                  {schema.raw}
-                </pre>
-              </details>
-              
-              <div>
-                <h3 className="text-base font-semibold mb-4">Tables</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {schema.tables.map((table, idx) => (
-                    <div key={table.name} className="card-hover bg-white/5 border border-white/10 rounded-lg p-5 fade-in" style={{ animationDelay: `${idx * 50}ms` }}>
-                      <h4 className="font-semibold mb-4 flex items-center gap-2">
-                        <Database size={16} />
-                        {table.name}
-                      </h4>
-                      <div className="space-y-2">
-                        {table.columns.map(col => (
-                          <div key={col.name} className="flex items-center justify-between text-xs py-1.5">
-                            <span className="text-white flex items-center gap-2">
-                              {col.name}
-                              {col.isPrimary && <span className="px-1.5 py-0.5 bg-white/10 text-white rounded text-[10px] font-medium">PK</span>}
-                              {col.isForeign && <span className="px-1.5 py-0.5 bg-white/10 text-white rounded text-[10px] font-medium">FK</span>}
-                            </span>
-                            <span className="text-gray-400 font-mono text-[11px]">{col.type}</span>
-                          </div>
-                        ))}
+            <div className="grid grid-cols-1 gap-4">
+              {dbConnections.map((conn, idx) => (
+                <div key={conn.id} className="card-hover glass border border-white/10 rounded-xl p-6 fade-in" style={{ animationDelay: `${idx * 50}ms` }}>
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center">
+                        <Database size={20} />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-lg">{conn.name}</h3>
+                        <p className="text-sm text-gray-400">{conn.db_type.toUpperCase()} • {conn.host}:{conn.database}</p>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-              
-              {schema.relationships.length > 0 && (
-                <div>
-                  <h3 className="text-base font-semibold mb-4">Relationships</h3>
-                  <div className="bg-white/5 border border-white/10 rounded-lg p-5 space-y-2">
-                    {schema.relationships.map((rel, idx) => (
-                      <div key={idx} className="text-sm text-white flex items-center gap-2">
-                        <code className="text-white bg-white/10 px-2 py-0.5 rounded">{rel.from}</code>
-                        <span className="text-gray-400">.</span>
-                        <code className="text-gray-400">{rel.column}</code>
-                        <span className="text-gray-500">→</span>
-                        <code className="text-white bg-white/10 px-2 py-0.5 rounded">{rel.to}</code>
-                      </div>
-                    ))}
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-1 bg-green-500/10 text-green-500 rounded text-xs font-medium">
+                        Connected
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mt-4 text-xs text-gray-500">
+                    Added {formatTimestamp(conn.created_at)}
                   </div>
                 </div>
-              )}
+              ))}
             </div>
           )}
         </div>
@@ -948,17 +552,312 @@ function SchemaView({ schema, schemaInput, setSchemaInput, analyzeSchema, loadDe
   );
 }
 
-// Metrics View Component
-function MetricsView({ trackedMetrics, setTrackedMetrics, selectedMetric, setSelectedMetric, setActiveView, setInputValue }) {
-  const handleAddMetric = () => {
-    setInputValue('I want to track...');
-    setActiveView('chat');
+// Create Monitor View - CONTINUED IN NEXT MESSAGE
+function CreateMonitorView({ dbConnections, loadMonitors, showToast, setActiveView }) {
+  const [step, setStep] = useState(1);
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    db_connection_id: '',
+    natural_language: '',
+    sql_query: '',
+    interval: 'hourly',
+    alert_condition: '',
+    alert_threshold: '',
+    slack_webhook: ''
+  });
+  const [generatedSQL, setGeneratedSQL] = useState('');
+  const [generating, setGenerating] = useState(false);
+  const [loading, setLoading] = useState(false);
+  
+  const handleGenerateSQL = async () => {
+    if (!formData.natural_language || !formData.db_connection_id) {
+      showToast('Please select a database and enter a monitoring request', 'warning');
+      return;
+    }
+    
+    setGenerating(true);
+    try {
+      // The backend will generate SQL automatically when creating monitor
+      setGeneratedSQL('SQL will be generated automatically...');
+      setStep(2);
+    } catch (error) {
+      showToast('Failed to proceed', 'error');
+    } finally {
+      setGenerating(false);
+    }
   };
   
-  const handleDeleteMetric = (id) => {
-    setTrackedMetrics(prev => prev.filter(m => m.id !== id));
-    if (selectedMetric?.id === id) {
-      setSelectedMetric(null);
+  const handleSubmit = async () => {
+    setLoading(true);
+    
+    try {
+      const payload = {
+        ...formData,
+        alert_threshold: formData.alert_threshold ? parseFloat(formData.alert_threshold) : null
+      };
+      
+      const res = await fetch(`${API}/monitors`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.detail || 'Failed to create monitor');
+      }
+      
+      const data = await res.json();
+      showToast(`Monitor "${data.name}" created successfully!`, 'success');
+      loadMonitors();
+      setActiveView('monitors');
+      
+      // Reset form
+      setFormData({
+        name: '',
+        description: '',
+        db_connection_id: '',
+        natural_language: '',
+        sql_query: '',
+        interval: 'hourly',
+        alert_condition: '',
+        alert_threshold: '',
+        slack_webhook: ''
+      });
+      setStep(1);
+    } catch (error) {
+      showToast(error.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="px-8 py-6 border-b border-white/10 backdrop-blur-sm bg-black/50">
+        <h1 className="text-2xl font-semibold mb-1">Create Monitor</h1>
+        <p className="text-sm text-gray-400">Describe what you want to monitor in natural language</p>
+      </div>
+      
+      <div className="flex-1 overflow-y-auto px-8 py-6">
+        <div className="max-w-3xl mx-auto space-y-6">
+          {/* Step 1: Basic Info & Natural Language */}
+          <div className="glass border border-white/10 rounded-xl p-6 fade-in">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-6 h-6 bg-white text-black rounded-full flex items-center justify-center text-xs font-bold">
+                1
+              </div>
+              <h3 className="text-lg font-semibold">Monitor Details</h3>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm text-gray-400 mb-2 block">Monitor Name</label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  placeholder="Daily Signups"
+                  className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-white/30 transition-all"
+                />
+              </div>
+              
+              <div>
+                <label className="text-sm text-gray-400 mb-2 block">Description (optional)</label>
+                <input
+                  type="text"
+                  value={formData.description}
+                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                  placeholder="Track daily user signups"
+                  className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-white/30 transition-all"
+                />
+              </div>
+              
+              <div>
+                <label className="text-sm text-gray-400 mb-2 block">Select Database</label>
+                <select
+                  value={formData.db_connection_id}
+                  onChange={(e) => setFormData({...formData, db_connection_id: e.target.value})}
+                  className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-white/30 transition-all"
+                >
+                  <option value="">Choose a database...</option>
+                  {dbConnections.map(conn => (
+                    <option key={conn.id} value={conn.id}>{conn.name}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="text-sm text-gray-400 mb-2 block">What do you want to monitor?</label>
+                <textarea
+                  value={formData.natural_language}
+                  onChange={(e) => setFormData({...formData, natural_language: e.target.value})}
+                  placeholder="Track daily signups&#10;Monitor checkout conversion rate&#10;Check if payment failures increased&#10;Alert me if churn increases by more than 5%"
+                  className="w-full h-32 bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-sm outline-none focus:border-white/30 transition-all resize-none"
+                />
+                <div className="text-xs text-gray-500 mt-2">
+                  Describe in plain English what metric you want to track
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Step 2: Schedule & Alerts */}
+          {step >= 2 && (
+            <div className="glass border border-white/10 rounded-xl p-6 fade-in">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-6 h-6 bg-white text-black rounded-full flex items-center justify-center text-xs font-bold">
+                  2
+                </div>
+                <h3 className="text-lg font-semibold">Schedule & Alerts</h3>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Check Interval</label>
+                  <select
+                    value={formData.interval}
+                    onChange={(e) => setFormData({...formData, interval: e.target.value})}
+                    className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-white/30 transition-all"
+                  >
+                    <option value="10min">Every 10 minutes</option>
+                    <option value="hourly">Hourly</option>
+                    <option value="daily">Daily</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Alert Condition (optional)</label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <select
+                      value={formData.alert_condition}
+                      onChange={(e) => setFormData({...formData, alert_condition: e.target.value})}
+                      className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-white/30 transition-all"
+                    >
+                      <option value="">No alerts</option>
+                      <option value="above">Above threshold</option>
+                      <option value="below">Below threshold</option>
+                    </select>
+                    <input
+                      type="number"
+                      value={formData.alert_threshold}
+                      onChange={(e) => setFormData({...formData, alert_threshold: e.target.value})}
+                      placeholder="Threshold value"
+                      className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-white/30 transition-all"
+                      disabled={!formData.alert_condition}
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Slack Webhook (optional)</label>
+                  <input
+                    type="text"
+                    value={formData.slack_webhook}
+                    onChange={(e) => setFormData({...formData, slack_webhook: e.target.value})}
+                    placeholder="https://hooks.slack.com/services/..."
+                    className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-white/30 transition-all"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Action Buttons */}
+          <div className="flex gap-3">
+            {step === 1 ? (
+              <button
+                onClick={handleGenerateSQL}
+                disabled={!formData.natural_language || !formData.db_connection_id || generating}
+                className="btn-hover px-6 py-3 bg-white text-black rounded-lg font-medium disabled:opacity-30 flex items-center gap-2"
+              >
+                {generating ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    Continue
+                    <ChevronRight size={18} />
+                  </>
+                )}
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={handleSubmit}
+                  disabled={loading}
+                  className="btn-hover px-6 py-3 bg-white text-black rounded-lg font-medium disabled:opacity-30 flex items-center gap-2"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 size={18} className="animate-spin" />
+                      Creating Monitor...
+                    </>
+                  ) : (
+                    <>
+                      <Check size={18} />
+                      Create Monitor
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => setStep(1)}
+                  className="btn-hover px-6 py-3 bg-white/5 text-white border border-white/10 rounded-lg font-medium"
+                >
+                  Back
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Active Monitors View
+function MonitorsView({ monitors, loadMonitors, showToast }) {
+  const [selectedMonitor, setSelectedMonitor] = useState(null);
+  const [monitorDetails, setMonitorDetails] = useState(null);
+  
+  const handlePause = async (id, currentStatus) => {
+    try {
+      const newStatus = currentStatus === 'active' ? 'paused' : 'active';
+      await fetch(`${API}/monitors/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      showToast(`Monitor ${newStatus}`, 'success');
+      loadMonitors();
+    } catch (error) {
+      showToast('Failed to update monitor', 'error');
+    }
+  };
+  
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this monitor?')) return;
+    
+    try {
+      await fetch(`${API}/monitors/${id}`, { method: 'DELETE' });
+      showToast('Monitor deleted', 'success');
+      loadMonitors();
+    } catch (error) {
+      showToast('Failed to delete monitor', 'error');
+    }
+  };
+  
+  const loadMonitorDetails = async (id) => {
+    try {
+      const res = await fetch(`${API}/monitors/${id}`);
+      const data = await res.json();
+      setMonitorDetails(data);
+      setSelectedMonitor(id);
+    } catch (error) {
+      console.error('Failed to load monitor details:', error);
     }
   };
   
@@ -966,294 +865,202 @@ function MetricsView({ trackedMetrics, setTrackedMetrics, selectedMetric, setSel
     <div className="flex-1 flex overflow-hidden">
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="px-8 py-6 border-b border-white/10 backdrop-blur-sm bg-black/50">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-semibold mb-1">Tracked Metrics</h1>
-              <p className="text-sm text-gray-400">Real-time monitoring with anomaly detection</p>
-            </div>
-            <button
-              onClick={handleAddMetric}
-              className="btn-hover px-4 py-2 bg-white text-black rounded-lg text-sm font-medium flex items-center gap-2"
-            >
-              <Activity size={16} />
-              Add Metric
-            </button>
-          </div>
+          <h1 className="text-2xl font-semibold mb-1">Active Monitors</h1>
+          <p className="text-sm text-gray-400">
+            {monitors.length} monitor{monitors.length !== 1 ? 's' : ''} • {monitors.filter(m => m.status === 'active').length} active
+          </p>
         </div>
         
         <div className="flex-1 overflow-y-auto px-8 py-6">
-          {trackedMetrics.length === 0 ? (
+          {monitors.length === 0 ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center max-w-md fade-in">
                 <div className="w-16 h-16 bg-white/10 backdrop-blur-sm rounded-2xl mx-auto mb-6 flex items-center justify-center border border-white/20">
                   <Activity className="w-8 h-8 text-white" />
                 </div>
-                <h3 className="text-lg font-semibold mb-3">No tracked metrics yet</h3>
-                <p className="text-gray-400 mb-6">Start tracking metrics to monitor your product's health automatically.</p>
-                <button
-                  onClick={handleAddMetric}
-                  className="btn-hover px-6 py-3 bg-white text-black rounded-lg font-medium"
-                >
-                  Add Your First Metric
-                </button>
+                <h3 className="text-lg font-semibold mb-3">No monitors yet</h3>
+                <p className="text-gray-400">Create your first monitor to start tracking metrics.</p>
               </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4 max-w-6xl mx-auto">
-              {trackedMetrics.map((metric, idx) => (
-                <MetricCard
-                  key={metric.id}
-                  metric={metric}
-                  onSelect={() => setSelectedMetric(metric)}
-                  onDelete={() => handleDeleteMetric(metric.id)}
-                  index={idx}
-                />
+              {monitors.map((monitor, idx) => (
+                <div 
+                  key={monitor.id}
+                  className="card-hover glass border border-white/10 rounded-xl p-6 cursor-pointer fade-in"
+                  onClick={() => loadMonitorDetails(monitor.id)}
+                  style={{ animationDelay: `${idx * 50}ms` }}
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`text-2xl ${monitor.status === 'active' ? 'text-green-500' : 'text-gray-500'}`}>
+                        ●
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-lg">{monitor.name}</h3>
+                        <p className="text-sm text-gray-400 mt-0.5">{monitor.description}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handlePause(monitor.id, monitor.status);
+                        }}
+                        className="btn-hover p-2 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10"
+                      >
+                        {monitor.status === 'active' ? <Pause size={16} /> : <Play size={16} />}
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(monitor.id);
+                        }}
+                        className="btn-hover p-2 bg-white/5 border border-white/10 rounded-lg hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-500"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-2xl font-bold">
+                        {monitor.last_value ? JSON.stringify(Object.values(monitor.last_value)[0]) : '—'}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {monitor.interval} • Last run: {formatTimestamp(monitor.last_run)}
+                      </div>
+                    </div>
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      monitor.status === 'active' ? 'bg-green-500/10 text-green-500' : 'bg-gray-500/10 text-gray-500'
+                    }`}>
+                      {monitor.status}
+                    </span>
+                  </div>
+                </div>
               ))}
             </div>
           )}
         </div>
       </div>
       
-      {selectedMetric && (
-        <MetricDetailPanel
-          metric={selectedMetric}
-          onClose={() => setSelectedMetric(null)}
-        />
+      {/* Monitor Details Panel */}
+      {selectedMonitor && monitorDetails && (
+        <div className="w-96 h-full glass border-l border-white/10 overflow-y-auto slide-in">
+          <div className="p-6 border-b border-white/10 flex items-center justify-between sticky top-0 glass">
+            <h2 className="text-lg font-semibold">Monitor Details</h2>
+            <button
+              onClick={() => {
+                setSelectedMonitor(null);
+                setMonitorDetails(null);
+              }}
+              className="text-gray-400 hover:text-white transition-colors"
+            >
+              <X size={20} />
+            </button>
+          </div>
+          
+          <div className="p-6 space-y-6">
+            <div>
+              <h3 className="font-semibold mb-2 text-lg">{monitorDetails.name}</h3>
+              <p className="text-sm text-gray-400">{monitorDetails.description}</p>
+            </div>
+            
+            <div>
+              <h4 className="text-sm font-medium mb-3 text-gray-400 uppercase tracking-wider">SQL Query</h4>
+              <pre className="bg-black/50 border border-white/10 rounded-lg p-4 text-xs overflow-x-auto font-mono">
+                <code className="text-white">{monitorDetails.sql_query}</code>
+              </pre>
+            </div>
+            
+            <div>
+              <h4 className="text-sm font-medium mb-3 text-gray-400 uppercase tracking-wider">Recent Results</h4>
+              <div className="space-y-2">
+                {monitorDetails.results && monitorDetails.results.slice(0, 10).map((result, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-3 bg-white/5 rounded-lg text-sm">
+                    <span className="text-gray-400">{formatTimestamp(result.timestamp)}</span>
+                    <span className="font-mono">{result.result ? JSON.stringify(Object.values(result.result[0])[0]) : 'N/A'}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
 }
 
-// Premium Metric Card Component
-function MetricCard({ metric, onSelect, onDelete, index }) {
-  const statusColors = {
-    ok: 'text-green-500',
-    warning: 'text-yellow-500',
-    critical: 'text-red-500'
-  };
-  
-  const TrendIcon = metric.trend === 'up' ? TrendingUp : TrendingDown;
-  
-  return (
-    <div 
-      className="card-hover glass border border-white/10 rounded-xl p-6 cursor-pointer fade-in"
-      onClick={onSelect}
-      style={{ animationDelay: `${index * 50}ms` }}
-    >
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <span className={`text-2xl ${statusColors[metric.status]}`}>●</span>
-          <div>
-            <h3 className="font-semibold text-lg">{metric.name}</h3>
-            <p className="text-sm text-gray-400 mt-0.5">{metric.description}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="px-2 py-1 bg-white/5 border border-white/10 rounded text-xs text-gray-400">
-            {metric.interval}
-          </span>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete();
-            }}
-            className="px-2 py-1 text-xs text-gray-400 hover:text-white hover:bg-white/10 rounded transition-all"
-          >
-            Delete
-          </button>
-        </div>
-      </div>
-      
-      <div className="flex items-end justify-between mb-4">
-        <div>
-          <div className="text-3xl font-bold mb-1">
-            {typeof metric.currentValue === 'number' 
-              ? metric.currentValue.toLocaleString() 
-              : metric.currentValue}
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            <TrendIcon size={14} className={metric.trend === 'up' ? 'text-green-500' : 'text-red-500'} />
-            <span className={metric.trend === 'up' ? 'text-green-500' : 'text-red-500'}>
-              {metric.change}
-            </span>
-            <span className="text-gray-500">vs last period</span>
-          </div>
-        </div>
-      </div>
-      
-      <div className="h-16 relative">
-        <PremiumLineChart data={metric.history} />
-      </div>
-      
-      <div className="text-xs text-gray-500 mt-3">
-        Last checked {formatTimestamp(metric.lastChecked)}
-      </div>
-    </div>
-  );
-}
-
-// Metric Detail Panel Component
-function MetricDetailPanel({ metric, onClose }) {
-  return (
-    <div className="w-96 h-full glass border-l border-white/10 overflow-y-auto slide-in">
-      <div className="p-6 border-b border-white/10 flex items-center justify-between sticky top-0 glass">
-        <h2 className="text-lg font-semibold">Metric Details</h2>
-        <button
-          onClick={onClose}
-          className="text-gray-400 hover:text-white transition-colors"
-        >
-          <X size={20} />
-        </button>
-      </div>
-      
-      <div className="p-6 space-y-6">
-        <div>
-          <h3 className="font-semibold mb-2 text-lg">{metric.name}</h3>
-          <p className="text-sm text-gray-400">{metric.description}</p>
-        </div>
-        
-        <div>
-          <h4 className="text-sm font-medium mb-3 text-gray-400 uppercase tracking-wider">SQL Query</h4>
-          <pre className="bg-black/50 border border-white/10 rounded-lg p-4 text-xs overflow-x-auto font-mono">
-            <code className="text-white">{metric.query}</code>
-          </pre>
-        </div>
-        
-        <div>
-          <h4 className="text-sm font-medium mb-3 text-gray-400 uppercase tracking-wider">Current Value</h4>
-          <div className="text-4xl font-bold">{metric.currentValue.toLocaleString()}</div>
-        </div>
-        
-        <div>
-          <h4 className="text-sm font-medium mb-3 text-gray-400 uppercase tracking-wider">7-Day History</h4>
-          <div className="h-48 bg-black/50 border border-white/10 rounded-lg p-4">
-            <PremiumLineChart data={metric.history} />
-          </div>
-        </div>
-        
-        <div>
-          <h4 className="text-sm font-medium mb-3 text-gray-400 uppercase tracking-wider">Anomaly Rules</h4>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm p-3 bg-white/5 border border-white/10 rounded-lg">
-              <span>Critical</span>
-              <span className="text-red-500">&gt; 20% deviation</span>
-            </div>
-            <div className="flex items-center justify-between text-sm p-3 bg-white/5 border border-white/10 rounded-lg">
-              <span>Warning</span>
-              <span className="text-yellow-500">10-20% deviation</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Alerts View Component (Simplified for space)
-function AlertsView({ notifications, setNotifications, alerts }) {
-  const updateNotification = (channel, field, value) => {
-    setNotifications(prev => ({
-      ...prev,
-      [channel]: { ...prev[channel], [field]: value }
-    }));
-  };
-  
+// Alerts View
+function AlertsView({ alerts, loadAlerts }) {
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <div className="px-8 py-6 border-b border-white/10 backdrop-blur-sm bg-black/50">
-        <h1 className="text-2xl font-semibold mb-1">Alerts & Notifications</h1>
-        <p className="text-sm text-gray-400">Configure where anomaly alerts are sent</p>
+        <h1 className="text-2xl font-semibold mb-1">Alert History</h1>
+        <p className="text-sm text-gray-400">{alerts.length} alert{alerts.length !== 1 ? 's' : ''} triggered</p>
       </div>
       
       <div className="flex-1 overflow-y-auto px-8 py-6">
-        <div className="max-w-4xl mx-auto space-y-6 fade-in">
-          <div className="glass border border-white/10 rounded-xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
-                  <Bell className="w-5 h-5 text-black" />
+        <div className="max-w-4xl mx-auto space-y-4">
+          {alerts.length === 0 ? (
+            <div className="flex items-center justify-center h-96">
+              <div className="text-center max-w-md fade-in">
+                <div className="w-16 h-16 bg-white/10 backdrop-blur-sm rounded-2xl mx-auto mb-6 flex items-center justify-center border border-white/20">
+                  <Bell className="w-8 h-8 text-white" />
                 </div>
-                <div>
-                  <h3 className="font-semibold">Slack</h3>
-                  <p className="text-xs text-gray-400">Send alerts to Slack channel</p>
-                </div>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={notifications.slack.active}
-                  onChange={(e) => updateNotification('slack', 'active', e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-white/10 rounded-full peer peer-checked:bg-white transition-all"></div>
-                <div className="absolute left-1 top-1 bg-white w-4 h-4 rounded-full peer-checked:translate-x-5 transition-transform"></div>
-              </label>
-            </div>
-            
-            <div className="space-y-3">
-              <div>
-                <label className="text-sm text-gray-400 mb-2 block">Webhook URL</label>
-                <input
-                  type="text"
-                  value={notifications.slack.webhookUrl}
-                  onChange={(e) => updateNotification('slack', 'webhookUrl', e.target.value)}
-                  placeholder="https://hooks.slack.com/services/..."
-                  className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-white/30 transition-all"
-                />
+                <h3 className="text-lg font-semibold mb-3">No alerts yet</h3>
+                <p className="text-gray-400">Alerts will appear here when thresholds are crossed.</p>
               </div>
             </div>
-          </div>
-          
-          <div className="glass border border-white/10 rounded-xl p-6">
-            <h3 className="text-lg font-semibold mb-4">Alert History</h3>
-            {alerts.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-gray-500">No alerts yet</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {alerts.map((alert, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
-                    <span>{alert.metric}</span>
-                    <span className="text-xs text-gray-400">{formatTimestamp(alert.timestamp)}</span>
+          ) : (
+            alerts.map((alert, idx) => (
+              <div key={alert.id} className="glass border border-yellow-500/20 rounded-xl p-6 fade-in" style={{ animationDelay: `${idx * 50}ms` }}>
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 bg-yellow-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <AlertTriangle className="w-5 h-5 text-yellow-500" />
                   </div>
-                ))}
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-lg mb-1">{alert.monitor_name}</h3>
+                    <p className="text-sm text-gray-400 mb-3">
+                      Condition: {alert.condition}
+                    </p>
+                    <div className="text-xs text-gray-500">
+                      {formatTimestamp(alert.timestamp)}
+                    </div>
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
+            ))
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-// Mobile Tab Bar Component
-function MobileTabBar({ activeView, setActiveView }) {
-  const tabs = [
-    { id: 'chat', icon: MessageSquare },
-    { id: 'metrics', icon: Activity },
-    { id: 'alerts', icon: Bell },
-    { id: 'schema', icon: Database },
-  ];
-  
+// Reports View
+function ReportsView({ monitors }) {
   return (
-    <div className="fixed bottom-0 left-0 right-0 glass border-t border-white/10 px-2 py-2 flex justify-around z-50">
-      {tabs.map(tab => {
-        const Icon = tab.icon;
-        return (
-          <button
-            key={tab.id}
-            onClick={() => setActiveView(tab.id)}
-            className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-all ${
-              activeView === tab.id
-                ? 'bg-white text-black'
-                : 'text-gray-400'
-            }`}
-          >
-            <Icon size={20} />
-          </button>
-        );
-      })}
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="px-8 py-6 border-b border-white/10 backdrop-blur-sm bg-black/50">
+        <h1 className="text-2xl font-semibold mb-1">Reports</h1>
+        <p className="text-sm text-gray-400">Historical data and trends</p>
+      </div>
+      
+      <div className="flex-1 overflow-y-auto px-8 py-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center py-20 fade-in">
+            <div className="w-16 h-16 bg-white/10 backdrop-blur-sm rounded-2xl mx-auto mb-6 flex items-center justify-center border border-white/20">
+              <BarChart3 className="w-8 h-8 text-white" />
+            </div>
+            <h3 className="text-lg font-semibold mb-3">Reports Coming Soon</h3>
+            <p className="text-gray-400">
+              Historical charts and trend analysis will be available here.
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
